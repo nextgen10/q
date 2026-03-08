@@ -1,0 +1,10 @@
+Analyze this locator file content:
+```python
+{content}
+```
+
+{focus_instruction}
+
+{recording_context}
+
+{instructions}

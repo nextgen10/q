@@ -1,0 +1,12 @@
+{
+  "prompt_key": "semantic",
+  "title": "Semantic Similarity",
+  "description": "Scores how semantically similar two texts are. Used for long-form / paragraph-level comparison against ground truth.",
+  "model": "gpt-4o (or Azure deployment)",
+  "temperature": 0.0,
+  "max_tokens": 50,
+  "response_format": "{\"score\": <float 0.0 to 1.0>}",
+  "used_in": "Fields configured with SEMANTIC strategy (default for text fields)",
+  "system_message": "You score text similarity. Respond ONLY with JSON.",
+  "user_message_template": "Score the semantic similarity between Text A and Text B.\nConsider meaning, intent, and information overlap — not exact wording.\nReturn ONLY a JSON object: {\"score\": <float 0.0 to 1.0>}\n\nText A: \"\"\"{text_a}\"\"\"\nText B: \"\"\"{text_b}\"\"\""
+}

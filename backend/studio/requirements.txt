@@ -1,0 +1,7 @@
+playwright
+pytest
+pandas
+openpyxl
+pytest-playwright
+extentreports
+pytest-xdist

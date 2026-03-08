@@ -1,0 +1,12 @@
+{
+  "prompt_key": "rag_context_precision",
+  "title": "RAG Context Precision",
+  "description": "Measures the signal-to-noise ratio in retrieved context. Evaluates whether the retrieved chunks are relevant to answering the query (low noise = high precision).",
+  "model": "gpt-4o (or Azure deployment)",
+  "temperature": 0.0,
+  "max_tokens": 2000,
+  "response_format": "Float score 0.0 to 1.0",
+  "used_in": "RAG evaluation pipeline (RAGAS context_precision metric)",
+  "system_message": "You are evaluating the quality of retrieved context for a RAG system. Your job is to determine how much of the context is actually relevant to answering the query.",
+  "user_message_template": "Query:\n{query}\n\nRetrieved Context:\n{context}\n\nTask: Evaluate the precision of this retrieved context. What percentage of the context is actually useful for answering the query?\n\nConsider:\n1. How much is directly relevant vs. noise?\n2. Is there unnecessary information?\n3. Is the signal-to-noise ratio high?\n\nReturn a score from 0.0 (all noise/irrelevant) to 1.0 (perfect precision/all relevant).\n\nScore (0.0-1.0):"
+}

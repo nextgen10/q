@@ -1,0 +1,15 @@
+
+Suggest improvements. Return a JSON object with this exact structure:
+{{
+  "suggestions": [
+    {{
+      "class_name": "Name of the class",
+      "locator_name": "Original variable name",
+      "suggested_name": "Better variable name (optional, same if no change)",
+      "suggested_value": "Better locator string",
+      "reason": "Why this is better"
+    }}
+  ]
+}}
+
+Return ONLY VALID JSON. No extra text.

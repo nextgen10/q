@@ -1,0 +1,89 @@
+Refactor this raw Playwright script into a clean POM structure.
+
+=== EXISTING REUSABLE SHARED FLOWS ===
+The following business processes are already implemented in our `SharedFlows` library. 
+If the RAW SCRIPT matches any of these intents (e.g., handles Login or specific navigation), YOU MUST call the shared flow instead of generating redundant code.
+
+Available Shared Flows:
+{shared_flows_context}
+
+Usage Rule:
+- Initialize shared flows in `test_code` using `self.shared = SharedFlows(page)`.
+- Use `self.shared.method_name(data)` in `page_code` or `test_code` where appropriate.
+
+=== RAW PLAYWRIGHT SCRIPT ===
+```python
+{raw_script}
+```
+
+Generate a JSON response with these exact keys:
+
+{{
+    "locators_code": "<Python code for locators class>",
+    "page_code": "<Python code for page class>",
+    "test_data": {{"KEY": ["value"]}},
+    "test_code": "<Python code for test class>",
+    "is_snippet": false,
+    "snippet_method_name": "logical_name_of_flow"
+}}
+
+=== SNIPPET MODE (REUSABILITY) ===
+If the user indicates this should be a reusable component:
+1. Set `is_snippet` to true.
+2. Provide a descriptive `snippet_method_name` (e.g., `login_to_portal`).
+3. In `page_code`, do NOT generate a full class if only a method is needed, but for consistency, you can still wrap it in `class GeneratedPage(BasePage):`.
+4. The backend will extract the method and append it to the shared flows.
+
+=== AVAILABLE BASEPAGE METHODS (USE ONLY THESE) ===
+- self.navigate_to(url)
+- self.click(selector, ...)
+- self.type_text(selector, text, clear_first=False)
+- self.verify_element_visible(selector)
+- self.verify_element_text(selector, expected_text)
+- self.verify_url(expected_url)
+- self.handle_alert(action='accept')
+- with self.handle_popup(): # Use to wrap clicks that open new tabs
+
+=== HALLUCINATION PREVENTION ===
+1. NO `self.page.click`. Use `self.click`.
+2. NO `self.get_by_role`. Use `GeneratedLocators.CONSTANT`.
+3. ALL locators MUST be in `GeneratedLocators`.
+
+=== EXACT FORMAT FOR page_code ===
+```python
+class GeneratedPage(BasePage):
+    def run_generated_flow(self, data: dict):
+        self.navigate_to("URL")
+        # DATA ACCESS: All data is in LISTS. Use index [0], [1], etc.
+        self.type_text(GeneratedLocators.USER_INPUT, data["USER_DATA"][0])
+        self.click(GeneratedLocators.LOGIN_BTN)
+```
+
+=== EXACT FORMAT FOR test_code ===
+```python
+import pytest
+import os
+from generated_pom.pages.generated_page import GeneratedPage
+from utils.json_util import JsonUtil
+from config.config import Config
+
+class TestGenerated:
+    @pytest.fixture
+    def generated_data(self):
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        path = os.path.join(base_dir, "data", "generated_data.json")
+        return JsonUtil.read_json(path) if os.path.exists(path) else {{}}
+
+    def test_flow(self, page, generated_data):
+        page.set_default_timeout(Config.TIMEOUT)
+        page_obj = GeneratedPage(page)
+        page_obj.run_generated_flow(generated_data)
+```
+
+=== CRITICAL RULES ===
+1. Return ONLY JSON.
+2. ZERO HARDCODED DATA in `test_code`. All values must come from `generated_data` fixture.
+3. DATA STRUCTURE: All keys in `test_data` MUST map to a LIST of strings, e.g., `"EMAIL_DATA": ["abc@link.com"]`.
+4. DATA ACCESS: In `page_code`, you MUST access data using list indexing, e.g., `data["EMAIL_DATA"][0]`.
+5. LIST INDEXING: If the same locator is filled multiple times, the values should be in the same list, and the code should use index [0], then [1], etc.
+6. Locators must be standard Playwright internal:role strings or CSS.

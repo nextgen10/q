@@ -1,36 +1,131 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Qualaris — Unified Platform
 
-## Getting Started
+> Enterprise-grade evaluation suite for RAG Pipelines, AI Agents, Ground Truth datasets, and Playwright automation.
 
-First, run the development server:
+## Architecture
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+```
+qualaris_new/
+├── src/                    # Next.js frontend (TypeScript, MUI, UBS design)
+│   ├── app/
+│   │   ├── agent-eval/     # Agent Eval module
+│   │   ├── rag-eval/       # RAG Eval module
+│   │   ├── playwright-pom/ # Playwright Compass module
+│   │   ├── ground-truth/   # Ground Truth Generator module
+│   │   ├── docs/           # Platform documentation
+│   │   └── login/          # Authentication
+│   ├── components/         # Shared UI — UnifiedNavBar, UbsLogoFull, AuthGuard
+│   ├── theme/              # UBS design tokens + MUI theme factory
+│   └── contexts/           # Auth + Theme providers
+│
+├── backend/                # FastAPI backend (Python)
+│   ├── main.py             # RAG Eval API + mounts all routers
+│   ├── agent_router.py     # Agent Eval + Auth endpoints
+│   ├── auth.py             # API key authentication
+│   ├── studio/             # Playwright Compass backend
+│   └── requirements.txt
+│
+├── start.sh                # Start all services (backend + frontend)
+├── stop.sh                 # Stop all services
+└── .env.local              # Frontend environment variables
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Prerequisites
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- **Node.js** ≥ 18
+- **Python** ≥ 3.10
+- **npm** ≥ 9
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Quick Start
 
-## Learn More
+### 1. Install frontend dependencies
+```bash
+npm install
+```
 
-To learn more about Next.js, take a look at the following resources:
+### 2. Set up backend
+```bash
+cd backend
+pip install -r requirements.txt
+cp .env.example .env          # then fill in your API keys
+cd ..
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### 3. Start everything
+```bash
+chmod +x start.sh stop.sh
+./start.sh
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+| Service | URL |
+|---------|-----|
+| Qualaris UI | http://localhost:3000 |
+| Swagger API docs | http://localhost:8000/docs |
+| ReDoc | http://localhost:8000/redoc |
 
-## Deploy on Vercel
+### Stop all services
+```bash
+./stop.sh
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+---
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Environment Variables
+
+### Frontend — `.env.local`
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `NEXT_PUBLIC_API_URL` | `http://localhost:8000` | Backend API base URL |
+| `PLAYWRIGHT_POM_API_BASE` | `http://localhost:8000` | Playwright Compass backend URL |
+
+### Backend — `backend/.env`
+Copy `backend/.env.example` and fill in:
+| Variable | Description |
+|----------|-------------|
+| `OPENAI_API_KEY` | OpenAI key for LLM evaluation |
+| `AZURE_OPENAI_*` | Azure OpenAI config (if using Azure) |
+| `CORS_ORIGINS` | Comma-separated allowed origins |
+
+---
+
+## Modules
+
+| Module | Frontend Route | Backend Prefix | Description |
+|--------|---------------|---------------|-------------|
+| **RAG Eval** | `/rag-eval` | `/evaluate`, `/evaluations` | Benchmarks RAG pipelines |
+| **Agent Eval** | `/agent-eval` | `/agent-eval/...` | Evaluates autonomous agents |
+| **Ground Truth Generator** | `/ground-truth` | — (client-only) | Dataset engineering studio |
+| **Playwright Compass** | `/playwright-pom` | `/api/playwright-pom/...` | Browser automation |
+| **Documentation** | `/docs` | — | Platform guide |
+
+---
+
+## Development
+
+### Frontend only
+```bash
+npm run dev
+```
+
+### Backend only
+```bash
+cd backend && python3 -m uvicorn main:app --reload --port 8000
+```
+
+### Build for production
+```bash
+npm run build
+npm start
+```
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Frontend | Next.js 15 (App Router), TypeScript, MUI v7, Tailwind CSS v4 |
+| Backend | FastAPI, SQLAlchemy, SQLite, Uvicorn |
+| LLM Evaluation | OpenAI gpt-4o / Azure OpenAI |
+| Auth | API key-based (X-API-Key header) |
+| Design | UBS-inspired design system |

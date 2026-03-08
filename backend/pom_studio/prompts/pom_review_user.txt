@@ -1,0 +1,47 @@
+The traditional AST converter generated the following POM structure from a raw Playwright script, but the test FAILED. 
+
+Please review the generated code and the failure error, and provide a production-grade fix.
+
+RAW SCRIPT:
+```python
+{raw_script}
+```
+
+AST GENERATED CODE:
+Locators:
+```python
+{locators_code}
+```
+Page:
+```python
+{page_code}
+```
+Test:
+```python
+{test_code}
+```
+Data:
+```json
+{test_data}
+```
+
+FAILURE ERROR:
+```
+{error_message}
+```
+
+Your task:
+1. Identify why the AST code failed.
+2. Rewrite the Locators, Page, and Test code to be more robust and production-grade.
+3. Fix any locators that might be incorrect based on your semantic understanding.
+4. Ensure the output follows our strict Data-Driven Testing rules (all data in lists, no hardcoded data in tests).
+
+Return a JSON response with these exact keys:
+{{
+    "locators_code": "<Fixed Python code>",
+    "page_code": "<Fixed Python code>",
+    "test_data": {{"KEY": ["value"]}},
+    "test_code": "<Fixed Python code>",
+    "is_snippet": false/true,
+    "snippet_method_name": "name"
+}}

@@ -1,0 +1,12 @@
+{
+  "prompt_key": "rag_correctness",
+  "title": "RAG Answer Correctness",
+  "description": "Evaluates the factual accuracy and semantic similarity between the generated answer and ground truth. Combines factual correctness with semantic alignment.",
+  "model": "gpt-4o (or Azure deployment)",
+  "temperature": 0.0,
+  "max_tokens": 2000,
+  "response_format": "Float score 0.0 to 1.0",
+  "used_in": "RAG evaluation pipeline (RAGAS answer_correctness metric)",
+  "system_message": "You are evaluating the correctness of a generated answer against a ground truth reference. Focus on factual accuracy and semantic alignment.",
+  "user_message_template": "Ground Truth:\n{ground_truth}\n\nGenerated Answer:\n{answer}\n\nTask: Evaluate how correct this answer is compared to the ground truth. Consider:\n1. Factual accuracy - are the facts correct?\n2. Semantic similarity - does it convey the same meaning?\n3. Completeness - does it cover all key points?\n\nReturn a score from 0.0 (completely incorrect) to 1.0 (perfectly correct).\n\nScore (0.0-1.0):"
+}

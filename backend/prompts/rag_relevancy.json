@@ -1,0 +1,12 @@
+{
+  "prompt_key": "rag_relevancy",
+  "title": "RAG Answer Relevancy",
+  "description": "Evaluates how well the generated answer addresses the user's query. Checks if the response is on-topic, complete, and directly answers the question asked.",
+  "model": "gpt-4o (or Azure deployment)",
+  "temperature": 0.0,
+  "max_tokens": 2000,
+  "response_format": "Float score 0.0 to 1.0",
+  "used_in": "RAG evaluation pipeline (RAGAS answer_relevancy metric)",
+  "system_message": "You are an expert evaluator assessing how relevant an answer is to the user's query. Focus on whether the answer directly addresses what was asked, is complete, and stays on-topic.",
+  "user_message_template": "Query:\n{query}\n\nAnswer:\n{answer}\n\nTask: Evaluate how relevant this answer is to the query. Consider:\n1. Does it directly address the question?\n2. Is it complete and comprehensive?\n3. Does it stay on-topic without unnecessary information?\n\nReturn a score from 0.0 (completely irrelevant) to 1.0 (perfectly relevant).\n\nScore (0.0-1.0):"
+}

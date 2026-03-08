@@ -1,0 +1,7 @@
+Failed Line: {failed_line}
+Error: {error_message}
+
+DOM Snapshot:
+{truncated_dom}
+
+Corrected Line:

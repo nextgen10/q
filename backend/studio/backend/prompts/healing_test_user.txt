@@ -1,0 +1,19 @@
+Analyze this test failure and provide a fix.
+
+ERROR MESSAGE:
+{error_message}
+
+TRACEBACK:
+{error_traceback}
+
+CURRENT LOCATORS CODE:
+```python
+{current_locators}
+```
+
+CURRENT PAGE OBJECT CODE:
+```python
+{current_page}
+```
+
+Identify the issue (likely a broken locator or missing wait) and provide the fixed file content in JSON format.

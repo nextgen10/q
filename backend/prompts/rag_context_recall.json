@@ -1,0 +1,12 @@
+{
+  "prompt_key": "rag_context_recall",
+  "title": "RAG Context Recall",
+  "description": "Measures whether all necessary information from the ground truth is present in the retrieved context. Evaluates retrieval completeness.",
+  "model": "gpt-4o (or Azure deployment)",
+  "temperature": 0.0,
+  "max_tokens": 2000,
+  "response_format": "Float score 0.0 to 1.0",
+  "used_in": "RAG evaluation pipeline (RAGAS context_recall metric)",
+  "system_message": "You are evaluating the completeness of retrieved context for a RAG system. Your job is to check if all necessary information to answer correctly is present in the context.",
+  "user_message_template": "Ground Truth:\n{ground_truth}\n\nRetrieved Context:\n{context}\n\nTask: Evaluate the recall of this retrieved context. What percentage of information needed to produce the ground truth answer is present in the context?\n\nConsider:\n1. Is all necessary information available?\n2. Are there critical gaps?\n3. Could the ground truth be generated from this context?\n\nReturn a score from 0.0 (missing all necessary info) to 1.0 (perfect recall/all info present).\n\nScore (0.0-1.0):"
+}

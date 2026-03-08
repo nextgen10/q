@@ -1,0 +1,12 @@
+{
+  "prompt_key": "fuzzy",
+  "title": "Fuzzy Match",
+  "description": "Scores how similar two short texts are, accounting for typos, abbreviations, spelling mistakes, reordering, and paraphrasing.",
+  "model": "gpt-4o (or Azure deployment)",
+  "temperature": 0.0,
+  "max_tokens": 50,
+  "response_format": "{\"score\": <float 0.0 to 1.0>}",
+  "used_in": "Fields configured with FUZZY strategy in field_strategies config",
+  "system_message": "You score text similarity. Respond ONLY with JSON.",
+  "user_message_template": "You MUST score how similar these two short texts are.\nReturn ONLY a JSON object: {\"score\": <float 0.0 to 1.0>}\n\nScoring rules (follow strictly):\n- If one text is a standard abbreviation of the other (e.g. \"Ltd\"/\"Limited\", \"Dr\"/\"Doctor\", \"Inc\"/\"Incorporated\", \"Corp\"/\"Corporation\", \"St\"/\"Street\", \"Ave\"/\"Avenue\", \"US\"/\"United States\"), they are IDENTICAL. Return exactly {\"score\": 1.0}.\n- If the texts are the same but differ only in case, spacing, or punctuation, return exactly {\"score\": 1.0}.\n- Typos or minor spelling errors: score 0.9–0.99.\n- Reordering of equivalent information: score 0.9–1.0.\n- Paraphrasing with same meaning: score 0.8–0.95.\n- Partially related but different meaning: score 0.3–0.6.\n- Completely different meaning: score 0.0–0.3.\n\nText A: \"\"\"{text_a}\"\"\"\nText B: \"\"\"{text_b}\"\"\""
+}

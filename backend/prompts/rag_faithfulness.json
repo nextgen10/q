@@ -1,0 +1,12 @@
+{
+  "prompt_key": "rag_faithfulness",
+  "title": "RAG Faithfulness",
+  "description": "Measures whether the generated answer is grounded in the provided context. Detects hallucinations by checking if claims in the answer can be traced to the retrieved context.",
+  "model": "gpt-4o (or Azure deployment)",
+  "temperature": 0.0,
+  "max_tokens": 2000,
+  "response_format": "Float score 0.0 to 1.0",
+  "used_in": "RAG evaluation pipeline (RAGAS faithfulness metric)",
+  "system_message": "You are a strict fact-checker evaluating whether an answer is faithful to its source context. Your job is to verify every claim in the answer can be traced to the provided context.",
+  "user_message_template": "Context:\n{context}\n\nAnswer:\n{answer}\n\nTask: Evaluate whether the answer is faithful to the context. Check if all claims, facts, and information in the answer are supported by or can be inferred from the context. Return a score from 0.0 (completely unfaithful/hallucinated) to 1.0 (perfectly grounded).\n\nScore (0.0-1.0):"
+}

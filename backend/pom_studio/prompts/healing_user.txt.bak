@@ -1,0 +1,27 @@
+Analyze this test failure and provide fixes:
+
+=== ERROR MESSAGE ===
+{error_message}
+
+=== TRACEBACK ===
+{error_traceback}
+
+=== CURRENT LOCATORS FILE ===
+```python
+{current_locators}
+```
+
+=== CURRENT PAGE FILE (For Context) ===
+```python
+{current_page}
+```
+
+Return a JSON object with this structure:
+{{
+  "status": "success",
+  "analysis": "Explanation of what went wrong",
+  "fixes_applied": false,
+  "fixed_locators": "Full content of fixed locators file (optional)",
+  "fixed_page": "Full content of fixed page file (optional)",
+  "suggestions": ["List of manual suggestions if auto-fix is not possible"]
+}}
