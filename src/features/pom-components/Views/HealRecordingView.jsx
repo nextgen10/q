@@ -3,10 +3,18 @@ import { Activity, AlertCircle, ArrowRight, CheckCircle, ChevronDown, Copy, Eye,
 import { Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Divider, IconButton, Menu, MenuItem, Paper, Stack, TextField, Tooltip, Typography } from '@mui/material';
 import { alpha, useTheme } from '@mui/material/styles';
 import { StatusSnackbar } from '../UI/StatusSnackbar';
+import { useAuth } from '@/contexts/AuthContext';
 
 export function HealRecordingView() {
     const theme = useTheme();
     const isDark = theme.palette.mode === 'dark';
+    const { getAuthHeaders } = useAuth();
+    const pomFetch = (input, init = {}) => {
+        const headers = new Headers(init.headers || {});
+        const authHeaders = getAuthHeaders();
+        Object.entries(authHeaders).forEach(([key, value]) => headers.set(key, value));
+        return fetch(input, { ...init, headers });
+    };
 
     const [recordings, setRecordings] = useState([]);
     const [selectedRecording, setSelectedRecording] = useState('');
@@ -36,7 +44,7 @@ export function HealRecordingView() {
 
     const fetchRecordings = async () => {
         try {
-            const res = await fetch('/api/playwright-pom/record/files');
+            const res = await pomFetch('/api/playwright-pom/record/files');
             const data = await res.json();
             setRecordings(data.files || []); // Expecting list of {name, path} or just strings?
             // Existing endpoint returns { files: [ {name: '...', path: '...'}, ...], folders: [...] }
@@ -52,7 +60,7 @@ export function HealRecordingView() {
         setLastFix(null);
 
         try {
-            const res = await fetch('/api/playwright-pom/heal/start', {
+            const res = await pomFetch('/api/playwright-pom/heal/start', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ filename: selectedRecording })
@@ -98,7 +106,7 @@ export function HealRecordingView() {
             }
 
             try {
-                const res = await fetch('/api/playwright-pom/heal/step', { method: 'POST' });
+                const res = await pomFetch('/api/playwright-pom/heal/step', { method: 'POST' });
                 const data = await res.json();
 
                 if (!res.ok) throw new Error(data.detail);
@@ -134,7 +142,7 @@ export function HealRecordingView() {
         setLogs(prev => [...prev, { type: 'info', message: 'Attempting to heal...' }]);
 
         try {
-            const res = await fetch('/api/playwright-pom/heal/fix', { method: 'POST' });
+            const res = await pomFetch('/api/playwright-pom/heal/fix', { method: 'POST' });
             const data = await res.json();
 
             if (!res.ok) throw new Error(data.detail);
@@ -151,7 +159,7 @@ export function HealRecordingView() {
 
     const fetchHealPrompts = async () => {
         try {
-            const res = await fetch('/api/playwright-pom/heal/prompts', { method: 'GET' });
+            const res = await pomFetch('/api/playwright-pom/heal/prompts', { method: 'GET' });
             const data = await res.json();
             if (!res.ok) throw new Error(data.detail);
 
@@ -164,7 +172,7 @@ export function HealRecordingView() {
 
     const saveFixOverride = async () => {
         try {
-            const res = await fetch('/api/playwright-pom/heal/fix', {
+            const res = await pomFetch('/api/playwright-pom/heal/fix', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ override_code: editedFix })

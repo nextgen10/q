@@ -5,7 +5,44 @@ import { Box, Button as MuiButton, CircularProgress, Dialog, DialogActions, Dial
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus, vs } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { alpha, useTheme } from '@mui/material/styles';
+import { keyframes } from '@mui/system';
 import { StatusSnackbar } from '../UI/StatusSnackbar';
+import { useAuth } from '@/contexts/AuthContext';
+
+const chatPing = keyframes`
+  0% {
+    transform: scale(1);
+    opacity: 0.75;
+  }
+  70% {
+    transform: scale(1.35);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1.35);
+    opacity: 0;
+  }
+`;
+
+const chatGlow = keyframes`
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(208, 0, 0, 0.65), 0 16px 32px rgba(0,0,0,0.35);
+  }
+  50% {
+    box-shadow: 0 0 0 18px rgba(208, 0, 0, 0), 0 16px 32px rgba(0,0,0,0.35);
+  }
+`;
+
+const chatBadgePulse = keyframes`
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.18);
+    opacity: 0.72;
+  }
+`;
 
 function Button({
     variant = 'primary-glass',
@@ -36,6 +73,14 @@ function Button({
 export function StudioView() {
     const theme = useTheme();
     const isDark = theme.palette.mode === 'dark';
+    const { getAuthHeaders } = useAuth();
+
+    const pomFetch = (input, init = {}) => {
+        const headers = new Headers(init.headers || {});
+        const authHeaders = getAuthHeaders();
+        Object.entries(authHeaders).forEach(([key, value]) => headers.set(key, value));
+        return fetch(input, { ...init, headers });
+    };
 
     const highlighterRef = useRef(null); // Ref for syncing scroll
     const previewHighlighterRef = useRef(null); // Ref for preview modal syncing scroll
@@ -173,13 +218,13 @@ export function StudioView() {
 
     // Fetch generated files on mount
     useEffect(() => {
-        fetch('/api/playwright-pom/generate/files')
+        pomFetch('/api/playwright-pom/generate/files')
             .then(res => res.json())
             .then(data => setGeneratedFiles(data.files || []))
             .catch(console.error);
 
         // Fetch markers from settings
-        fetch('/api/playwright-pom/settings')
+        pomFetch('/api/playwright-pom/settings')
             .then(res => res.json())
             .then(data => {
                 if (data.markers) setAvailableMarkers(data.markers);
@@ -193,7 +238,7 @@ export function StudioView() {
         if (runningTest) {
             interval = setInterval(async () => {
                 try {
-                    const res = await fetch(`/api/playwright-pom/tests/logs?offset=${logOffset}`);
+                    const res = await pomFetch(`/api/playwright-pom/tests/logs?offset=${logOffset}`);
                     const data = await res.json();
                     if (data.content) {
                         setLiveLogs(prev => prev + data.content);
@@ -217,7 +262,7 @@ export function StudioView() {
                 try {
                     // We reuse the same offset logic, but need separate state if we want to be safe.
                     // Actually, let's reuse logOffset but reset it before starting.
-                    const res = await fetch(`/api/playwright-pom/record/run/logs?offset=${logOffset}`);
+                    const res = await pomFetch(`/api/playwright-pom/record/run/logs?offset=${logOffset}`);
                     const data = await res.json();
                     if (data.content) {
                         setRawRunResult(prev => ({
@@ -240,7 +285,7 @@ export function StudioView() {
 
     useEffect(() => {
         if (showPublishModal) {
-            fetch('/api/playwright-pom/settings')
+            pomFetch('/api/playwright-pom/settings')
                 .then(res => res.json())
                 .then(data => {
                     if (data.markers) setAvailableMarkers(data.markers);
@@ -259,7 +304,7 @@ export function StudioView() {
             setTestResult(null);
             setTestError(null);
             setHealResult(null); // Clear heal result when rerunning
-            const res = await fetch('/api/playwright-pom/tests/run', {
+            const res = await pomFetch('/api/playwright-pom/tests/run', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({})
@@ -291,7 +336,7 @@ export function StudioView() {
             const errorMessage = testResult.output?.substring(0, 500) || 'Test failed';
             const errorTraceback = testResult.output || '';
 
-            const res = await fetch('/api/playwright-pom/ai/heal', {
+            const res = await pomFetch('/api/playwright-pom/ai/heal', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -321,7 +366,7 @@ export function StudioView() {
 
     const fetchPrompts = async () => {
         try {
-            const res = await fetch('/api/playwright-pom/ai/prompts', {
+            const res = await pomFetch('/api/playwright-pom/ai/prompts', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ raw_script: code })
@@ -350,7 +395,10 @@ export function StudioView() {
 
     const handleDownloadReport = async () => {
         try {
-            const res = await fetch('/api/tests/report/download', { method: 'GET' });
+            const headers = new Headers();
+            const authHeaders = getAuthHeaders();
+            Object.entries(authHeaders).forEach(([key, value]) => headers.set(key, value));
+            const res = await fetch('/api/tests/report/download', { method: 'GET', headers });
             if (!res.ok) {
                 throw new Error(`Download failed with status ${res.status}`);
             }
@@ -369,8 +417,7 @@ export function StudioView() {
             link.remove();
             URL.revokeObjectURL(url);
         } catch (e) {
-            // Fallback: keep legacy behavior if blob download fails.
-            window.open('/api/tests/report/download', '_blank');
+            showStatus(e.message || 'Failed to download report', 'error');
         }
     };
 
@@ -379,7 +426,7 @@ export function StudioView() {
         try {
             setPublishing(true);
             setTestError(null);
-            const res = await fetch('/api/playwright-pom/publish', {
+            const res = await pomFetch('/api/playwright-pom/publish', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -425,7 +472,7 @@ export function StudioView() {
         }
 
         try {
-            const res = await fetch(`/api/playwright-pom/record/load/${filepath}`);
+            const res = await pomFetch(`/api/playwright-pom/record/load/${filepath}`);
             if (!res.ok) throw new Error("Failed to load file");
             const data = await res.json();
             setPreviewContent(data.content);
@@ -439,7 +486,7 @@ export function StudioView() {
         if (!previewFile) return;
         setPreviewSaveStatus("saving");
         try {
-            const res = await fetch('/api/playwright-pom/record/save', {
+            const res = await pomFetch('/api/playwright-pom/record/save', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -565,7 +612,7 @@ export function StudioView() {
     const fetchRecordings = async () => {
         try {
             setLoadingFiles(true);
-            const res = await fetch('/api/playwright-pom/record/files');
+            const res = await pomFetch('/api/playwright-pom/record/files');
             const data = await res.json();
             setRecordings(data.files || []);
             setAllFolders(data.folders || []);
@@ -588,7 +635,7 @@ export function StudioView() {
         });
 
         try {
-            const res = await fetch('/api/playwright-pom/extract-snippet', {
+            const res = await pomFetch('/api/playwright-pom/extract-snippet', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -624,7 +671,7 @@ export function StudioView() {
         if (recording) {
             interval = setInterval(async () => {
                 try {
-                    const res = await fetch('/api/playwright-pom/record/content');
+                    const res = await pomFetch('/api/playwright-pom/record/content');
                     const data = await res.json();
                     setCode(data.content);
                 } catch (err) {
@@ -633,7 +680,7 @@ export function StudioView() {
             }, 1000);
         } else {
             // Initial fetch or refresh when not recording
-            fetch('/api/playwright-pom/record/content')
+            pomFetch('/api/playwright-pom/record/content')
                 .then(res => res.json())
                 .then(data => setCode(data.content))
                 .catch(e => console.error(e));
@@ -650,7 +697,7 @@ export function StudioView() {
             setStatus(null);
             // console.log("Saving code...", currentFilePath ? `to ${currentFilePath}` : "to raw_recorded.py");  // TODO: Remove in production
 
-            const res = await fetch('/api/playwright-pom/record/save', {
+            const res = await pomFetch('/api/playwright-pom/record/save', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -683,7 +730,7 @@ export function StudioView() {
         try {
             setSaveStatus('saving');
             setStatus(null);
-            const res = await fetch('/api/playwright-pom/record/save-as', {
+            const res = await pomFetch('/api/playwright-pom/record/save-as', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -788,7 +835,7 @@ export function StudioView() {
             const finalItemsToDelete = [...folders, ...validFilesToDelete];
 
             const deletePromises = finalItemsToDelete.map(path =>
-                fetch(`/api/playwright-pom/record/delete/${path}`, { method: 'DELETE' })
+                pomFetch(`/api/playwright-pom/record/delete/${path}`, { method: 'DELETE' })
             );
 
             await Promise.all(deletePromises);
@@ -821,7 +868,7 @@ export function StudioView() {
     const executeDelete = async () => {
         if (!confirmDeleteFile) return;
         try {
-            const res = await fetch(`/api/playwright-pom/record/delete/${confirmDeleteFile}`, { method: 'DELETE' });
+            const res = await pomFetch(`/api/playwright-pom/record/delete/${confirmDeleteFile}`, { method: 'DELETE' });
             if (!res.ok) throw new Error("Failed to delete file");
             fetchRecordings();
             if (confirmDeleteFile === currentFilePath) {
@@ -839,7 +886,7 @@ export function StudioView() {
     const loadFile = async (filepath) => {
         try {
             setStatus(null);
-            const res = await fetch(`/api/playwright-pom/record/load/${filepath}`);
+            const res = await pomFetch(`/api/playwright-pom/record/load/${filepath}`);
             if (!res.ok) throw new Error("Failed to load file");
 
             const data = await res.json();
@@ -857,7 +904,7 @@ export function StudioView() {
     const startRecording = async () => {
         try {
             setStatus(null);
-            const res = await fetch('/api/playwright-pom/record/start', { method: 'POST' });
+            const res = await pomFetch('/api/playwright-pom/record/start', { method: 'POST' });
             if (res.ok) {
                 setRecording(true);
                 setRecordingCompleted(false); // Reset completion state
@@ -872,7 +919,7 @@ export function StudioView() {
 
     const stopRecording = async () => {
         try {
-            await fetch('/api/playwright-pom/record/stop', { method: 'POST' });
+            await pomFetch('/api/playwright-pom/record/stop', { method: 'POST' });
             setRecording(false);
             setRecordingCompleted(true); // Mark as completed
         } catch (e) { showStatus(e.message, "error"); }
@@ -890,7 +937,7 @@ export function StudioView() {
             // Determine which file to use as input
             const inputPath = currentFilePath || "tools/raw_recorded.py";
 
-            const res = await fetch('/api/playwright-pom/generate', {
+            const res = await pomFetch('/api/playwright-pom/generate', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -920,7 +967,7 @@ export function StudioView() {
         setLogOffset(0); // Reset log offset
         setShowRunRawModal(true);
         try {
-            const res = await fetch('/api/playwright-pom/record/run', {
+            const res = await pomFetch('/api/playwright-pom/record/run', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -942,7 +989,7 @@ export function StudioView() {
         setChatMessages(newMsgs);
         setIsChatTyping(true);
 
-        fetch('/api/playwright-pom/ai/chat', {
+        pomFetch('/api/playwright-pom/ai/chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -2843,18 +2890,58 @@ export function StudioView() {
                             width: 48,
                             height: 48,
                             borderRadius: '50%',
+                            overflow: 'visible',
                             color: '#fff',
                             background: 'linear-gradient(135deg, #D00000, #D00000, #D00000)',
                             boxShadow: '0 16px 32px rgba(0,0,0,0.35)',
                             transition: 'transform 0.2s ease',
+                            ...(!showChat && {
+                                animation: `${chatGlow} 1.4s ease-in-out infinite`,
+                            }),
                             '&:hover': { transform: 'scale(1.1)', background: 'linear-gradient(135deg, #D00000, #D00000, #D00000)' },
                             '&:active': { transform: 'scale(0.95)' },
                         }}
                     >
                         {!showChat && (
                             <>
-                                <Box sx={{ position: 'absolute', inset: 0, borderRadius: '50%', border: '1px solid', borderColor: isDark ? '#4b5563' : 'rgba(185,28,28,0.4)', animation: 'ping 2s linear infinite' }} />
-                                <Box sx={{ position: 'absolute', inset: 0, borderRadius: '50%', border: '1px solid', borderColor: isDark ? '#374151' : 'rgba(185,28,28,0.2)', animation: 'ping 2s linear infinite 1s' }} />
+                                <Box
+                                    sx={{
+                                        position: 'absolute',
+                                        inset: 0,
+                                        borderRadius: '50%',
+                                        border: '1px solid',
+                                        borderColor: isDark ? '#4b5563' : 'rgba(185,28,28,0.4)',
+                                        animation: `${chatPing} 1.6s linear infinite`,
+                                        pointerEvents: 'none',
+                                    }}
+                                />
+                                <Box
+                                    sx={{
+                                        position: 'absolute',
+                                        inset: 0,
+                                        borderRadius: '50%',
+                                        border: '1px solid',
+                                        borderColor: isDark ? '#374151' : 'rgba(185,28,28,0.2)',
+                                        animation: `${chatPing} 1.6s linear infinite`,
+                                        animationDelay: '0.8s',
+                                        pointerEvents: 'none',
+                                    }}
+                                />
+                                <Box
+                                    sx={{
+                                        position: 'absolute',
+                                        top: -2,
+                                        right: -2,
+                                        width: 10,
+                                        height: 10,
+                                        borderRadius: '50%',
+                                        bgcolor: '#22c55e',
+                                        border: '1px solid',
+                                        borderColor: '#fff',
+                                        animation: `${chatBadgePulse} 1.1s ease-in-out infinite`,
+                                        pointerEvents: 'none',
+                                    }}
+                                />
                             </>
                         )}
                         {showChat ? (

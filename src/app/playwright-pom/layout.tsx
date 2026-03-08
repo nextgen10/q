@@ -14,7 +14,7 @@ export default function PlaywrightPomLayout({ children }: { children: React.Reac
   const { session } = useAuth();
 
   return (
-    <AuthGuard>
+    <AuthGuard requiredAccess="PLAYWRIGHT_POM">
       <style>{`body { overflow: hidden !important; }`}</style>
       <Box sx={{
         display: 'flex', flexDirection: 'column',

@@ -6,10 +6,18 @@ import { ThemeToggle } from '../UI/ThemeToggle';
 import { Button } from '../UI/Button';
 import { StatusSnackbar } from '../UI/StatusSnackbar';
 import { alpha, useTheme } from '@mui/material/styles';
+import { useAuth } from '@/contexts/AuthContext';
 
 export function FeedbackView() {
     const theme = useTheme();
     const isDark = theme.palette.mode === 'dark';
+    const { getAuthHeaders } = useAuth();
+    const pomFetch = (input, init = {}) => {
+        const headers = new Headers(init.headers || {});
+        const authHeaders = getAuthHeaders();
+        Object.entries(authHeaders).forEach(([key, value]) => headers.set(key, value));
+        return fetch(input, { ...init, headers });
+    };
 
     const [feedback, setFeedback] = useState({
         category: 'general',
@@ -34,7 +42,7 @@ export function FeedbackView() {
     // Fetch feedback from backend
     const fetchFeedback = async () => {
         try {
-            const response = await fetch('/api/playwright-pom/feedback/list');
+            const response = await pomFetch('/api/playwright-pom/feedback/list');
             if (response.ok) {
                 const data = await response.json();
                 setSubmittedFeedback(data);
@@ -60,7 +68,7 @@ export function FeedbackView() {
         setSubmitting(true);
 
         try {
-            const response = await fetch('/api/playwright-pom/feedback/submit', {
+            const response = await pomFetch('/api/playwright-pom/feedback/submit', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

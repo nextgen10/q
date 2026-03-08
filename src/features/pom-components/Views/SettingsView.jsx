@@ -4,10 +4,18 @@ import { alpha, useTheme } from '@mui/material/styles';
 import { Plus, RefreshCw, Save, Settings2, Trash2, X } from 'lucide-react';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import { StatusSnackbar } from '../UI/StatusSnackbar';
+import { useAuth } from '@/contexts/AuthContext';
 
 export function SettingsView() {
     const theme = useTheme();
     const isDark = theme.palette.mode === 'dark';
+    const { getAuthHeaders } = useAuth();
+    const pomFetch = (input, init = {}) => {
+        const headers = new Headers(init.headers || {});
+        const authHeaders = getAuthHeaders();
+        Object.entries(authHeaders).forEach(([key, value]) => headers.set(key, value));
+        return fetch(input, { ...init, headers });
+    };
 
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -37,7 +45,7 @@ export function SettingsView() {
     const fetchSharedData = async () => {
         setDataLoading(true);
         try {
-            const res = await fetch('/api/playwright-pom/data/shared');
+            const res = await pomFetch('/api/playwright-pom/data/shared');
             const data = await res.json();
             setSharedData(data);
         } catch (error) {
@@ -49,7 +57,7 @@ export function SettingsView() {
 
     const saveSharedData = async (updatedData) => {
         try {
-            const res = await fetch('/api/playwright-pom/data/shared', {
+            const res = await pomFetch('/api/playwright-pom/data/shared', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(updatedData || sharedData)
@@ -63,7 +71,7 @@ export function SettingsView() {
 
     const fetchSettings = async () => {
         try {
-            const response = await fetch('/api/playwright-pom/settings');
+            const response = await pomFetch('/api/playwright-pom/settings');
             if (!response.ok) throw new Error('Failed to fetch settings');
             const data = await response.json();
             setSettings(data);
@@ -78,7 +86,7 @@ export function SettingsView() {
     const handleSave = async () => {
         setSaving(true);
         try {
-            const response = await fetch('/api/playwright-pom/settings', {
+            const response = await pomFetch('/api/playwright-pom/settings', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(settings)

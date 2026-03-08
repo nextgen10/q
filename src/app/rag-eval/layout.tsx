@@ -47,7 +47,7 @@ function RAGEvalNav() {
 
 export default function RAGEvalLayout({ children }: { children: React.ReactNode }) {
     return (
-        <AuthGuard>
+        <AuthGuard requiredAccess="RAG_EVAL">
             <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', bgcolor: 'background.default', color: 'text.primary' }}>
                 <Suspense fallback={null}>
                     <RAGEvalNav />

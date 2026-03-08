@@ -14,7 +14,7 @@ export default function GroundTruthLayout({ children }: { children: React.ReactN
   const { session } = useAuth();
 
   return (
-    <AuthGuard>
+    <AuthGuard requiredAccess="GROUND_TRUTH">
       <Box sx={{
         display: 'flex', flexDirection: 'column',
         height: '100vh', overflow: 'hidden',

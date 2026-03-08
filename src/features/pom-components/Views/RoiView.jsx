@@ -44,6 +44,7 @@ import {
     YAxis,
 } from "recharts";
 import { MetricCard } from "@/components/shared/MetricCard";
+import { useAuth } from "@/contexts/AuthContext";
 
 const ASSUMPTION_FIELDS = [
     { key: "hourly_rate", label: "Hourly Rate ($/hr)", icon: DollarSign },
@@ -59,6 +60,13 @@ const ASSUMPTION_FIELDS = [
 export function RoiView() {
     const theme = useTheme();
     const isDark = theme.palette.mode === "dark";
+    const { getAuthHeaders } = useAuth();
+    const pomFetch = (input, init = {}) => {
+        const headers = new Headers(init.headers || {});
+        const authHeaders = getAuthHeaders();
+        Object.entries(authHeaders).forEach(([key, value]) => headers.set(key, value));
+        return fetch(input, { ...init, headers });
+    };
 
     const [stats, setStats] = useState(null);
     const [settings, setSettings] = useState(null);
@@ -77,7 +85,7 @@ export function RoiView() {
         if (!silent) setLoading(true);
         else setRefreshing(true);
         try {
-            const res = await fetch("/api/playwright-pom/roi/stats");
+            const res = await pomFetch("/api/playwright-pom/roi/stats");
             if (!res.ok) throw new Error(res.statusText);
             const data = await res.json();
             setStats(data);
@@ -99,7 +107,7 @@ export function RoiView() {
     const handleSaveSettings = async () => {
         setSaving(true);
         try {
-            const res = await fetch("/api/playwright-pom/roi/settings", {
+            const res = await pomFetch("/api/playwright-pom/roi/settings", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(formSettings),

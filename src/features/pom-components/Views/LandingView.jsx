@@ -8,6 +8,7 @@ import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import SpeedIcon from '@mui/icons-material/Speed';
 import SecurityIcon from '@mui/icons-material/Security';
 import { AppleCompass } from '../AppleCompass';
+import { useAuth } from '@/contexts/AuthContext';
 
 // Comet animation
 const cometTrail = keyframes`
@@ -93,6 +94,7 @@ export const LandingView = ({ onGetStarted }) => {
     const canvasRef = useRef(null);
     const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
     const [testDesignFeedback, setTestDesignFeedback] = useState([]);
+    const { isAuthenticated, getAuthHeaders } = useAuth();
 
     // Animated background with particles
     useEffect(() => {
@@ -192,7 +194,13 @@ export const LandingView = ({ onGetStarted }) => {
 
         const loadFeedback = async () => {
             try {
-                const response = await fetch('/api/playwright-pom/feedback/list');
+                if (!isAuthenticated) {
+                    if (isMounted) setTestDesignFeedback([]);
+                    return;
+                }
+                const response = await fetch('/api/playwright-pom/feedback/list', {
+                    headers: getAuthHeaders(),
+                });
                 if (!response.ok) return;
                 const data = await response.json();
                 const aiFeedback = (Array.isArray(data) ? data : [])
@@ -224,7 +232,7 @@ export const LandingView = ({ onGetStarted }) => {
             isMounted = false;
             clearInterval(intervalId);
         };
-    }, []);
+    }, [getAuthHeaders, isAuthenticated]);
 
     return (
         <Box

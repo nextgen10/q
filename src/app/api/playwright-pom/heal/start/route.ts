@@ -5,9 +5,12 @@ const PLAYWRIGHT_POM_API_BASE = process.env.PLAYWRIGHT_POM_API_BASE || 'http://l
 export async function POST(request: NextRequest) {
   try {
     const payload = await request.json().catch(() => ({}));
+    const headers = new Headers({ 'Content-Type': 'application/json' });
+    const apiKey = request.headers.get('x-api-key');
+    if (apiKey) headers.set('X-API-Key', apiKey);
     const response = await fetch(`${PLAYWRIGHT_POM_API_BASE}/api/heal/start`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify(payload),
       cache: 'no-store',
     });

@@ -65,6 +65,7 @@ import { API_ROOT } from '@/utils/apiBase';
 import { authFetch } from '@/features/agent-eval/utils/authFetch';
 import { useCallback } from 'react';
 import UBSSnackbar from '@/components/UBSSnackbar';
+import AnimatedQualarisWord from '@/components/AnimatedQualarisWord';
 
 const MotionPaper = motion(Paper);
 
@@ -464,7 +465,7 @@ export default function QualarisLanding() {
         }}>
           <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: '-80px' }} transition={{ duration: 0.5 }}>
             <Typography variant="overline" sx={{ display: 'block', mb: 4, letterSpacing: '0.08em', color: 'text.secondary', fontWeight: 600, fontSize: '0.75rem' }}>
-              QUALARIS APPLICATION SUITE
+              <AnimatedQualarisWord withDots={false} sx={{ fontSize: '0.75rem', fontWeight: 700, verticalAlign: 'middle' }} /> APPLICATION SUITE
             </Typography>
           </motion.div>
           <Grid container spacing={4}>
@@ -1011,7 +1012,9 @@ export default function QualarisLanding() {
                     wordmarkColor={isLight ? theme.palette.primary.main : '#FFFFFF'}
                   />
                   <BrandPipe />
-                  <Typography variant="h6" sx={{ fontWeight: 600, color: 'text.primary', whiteSpace: 'nowrap', fontSize: '1.125rem' }}>QUALARIS</Typography>
+                  <Typography variant="h6" component="div" sx={{ whiteSpace: 'nowrap', fontSize: '1.125rem' }}>
+                    <AnimatedQualarisWord />
+                  </Typography>
                 </Box>
                 <Typography variant="body2" color="text.secondary">
                   Public-facing quality engineering suite for ground truth engineering, Playwright automation, RAG benchmarking, and autonomous agent evaluation.
@@ -1092,7 +1095,7 @@ function formatTimeAgo(ts: string): string {
 
 function FeedbackSection() {
   const theme = useTheme();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, getAuthHeaders } = useAuth();
   const [rating, setRating] = useState<number | null>(0);
   const [hoverRating, setHoverRating] = useState(-1);
   const [suggestion, setSuggestion] = useState('');
@@ -1118,9 +1121,12 @@ function FeedbackSection() {
 
   const fetchFeedback = useCallback(async () => {
     try {
+      const testDesignRequest = isAuthenticated
+        ? fetch(TEST_DESIGN_FEEDBACK_API, { headers: getAuthHeaders() })
+        : Promise.resolve(new Response(JSON.stringify([]), { status: 200 }));
       const [agentEvalRes, testDesignRes] = await Promise.all([
         fetch(FEEDBACK_API),
-        fetch(TEST_DESIGN_FEEDBACK_API),
+        testDesignRequest,
       ]);
 
       const merged: FeedbackEntry[] = [];
@@ -1157,7 +1163,7 @@ function FeedbackSection() {
       merged.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
       setFeedbacks(merged);
     } catch { /* silent */ } finally { setFetchLoading(false); }
-  }, []);
+  }, [getAuthHeaders, isAuthenticated]);
 
   useEffect(() => { fetchFeedback(); }, [fetchFeedback]);
 

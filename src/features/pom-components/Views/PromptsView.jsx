@@ -19,10 +19,18 @@ import {
 import { alpha, useTheme } from '@mui/material/styles';
 import { ChevronRight, Code, List as ListIcon, MessageSquare, RefreshCw, Save, Search, Wand2 } from 'lucide-react';
 import { StatusSnackbar } from '../UI/StatusSnackbar';
+import { useAuth } from '@/contexts/AuthContext';
 
 export function PromptsView() {
     const theme = useTheme();
     const isDark = theme.palette.mode === 'dark';
+    const { getAuthHeaders } = useAuth();
+    const pomFetch = (input, init = {}) => {
+        const headers = new Headers(init.headers || {});
+        const authHeaders = getAuthHeaders();
+        Object.entries(authHeaders).forEach(([key, value]) => headers.set(key, value));
+        return fetch(input, { ...init, headers });
+    };
 
     const [prompts, setPrompts] = useState([]);
     const [selectedPrompt, setSelectedPrompt] = useState('');
@@ -35,7 +43,7 @@ export function PromptsView() {
     const fetchPrompts = async () => {
         setLoading(true);
         try {
-            const response = await fetch('/api/playwright-pom/prompts/list');
+            const response = await pomFetch('/api/playwright-pom/prompts/list');
             if (response.ok) {
                 const data = await response.json();
                 setPrompts(data);
@@ -55,7 +63,7 @@ export function PromptsView() {
     const handleSelectPrompt = async (filename) => {
         setSelectedPrompt(filename);
         try {
-            const response = await fetch(`/api/playwright-pom/prompts/${filename}`);
+            const response = await pomFetch(`/api/playwright-pom/prompts/${filename}`);
             if (response.ok) {
                 const data = await response.json();
                 setContent(data.content);
@@ -70,7 +78,7 @@ export function PromptsView() {
         if (!selectedPrompt) return;
         setSaving(true);
         try {
-            const response = await fetch(`/api/playwright-pom/prompts/${selectedPrompt}`, {
+            const response = await pomFetch(`/api/playwright-pom/prompts/${selectedPrompt}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ content })

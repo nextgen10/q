@@ -53,6 +53,7 @@ import {
     X,
 } from "lucide-react";
 import { StatusSnackbar } from "../UI/StatusSnackbar";
+import { useAuth } from "@/contexts/AuthContext";
 
 const buildFileTree = (files) => {
     const root = {};
@@ -180,6 +181,13 @@ const FileTreeNode = ({ node, level = 0, onSelect, selectedFile, isDark, theme }
 export const LocatorManagementView = () => {
     const theme = useTheme();
     const isDark = theme.palette.mode === "dark";
+    const { getAuthHeaders } = useAuth();
+    const pomFetch = (input, init = {}) => {
+        const headers = new Headers(init.headers || {});
+        const authHeaders = getAuthHeaders();
+        Object.entries(authHeaders).forEach(([key, value]) => headers.set(key, value));
+        return fetch(input, { ...init, headers });
+    };
 
     const [files, setFiles] = useState([]);
     const [selectedFile, setSelectedFile] = useState(null);
@@ -219,7 +227,7 @@ export const LocatorManagementView = () => {
     const fetchFiles = async () => {
         try {
             setLoading(true);
-            const res = await fetch("/api/playwright-pom/locators/");
+            const res = await pomFetch("/api/playwright-pom/locators/");
             const data = await res.json();
             setFiles(data);
             if (selectedFile) {
@@ -237,7 +245,7 @@ export const LocatorManagementView = () => {
 
     const fetchRecordings = async () => {
         try {
-            const res = await fetch("/api/playwright-pom/record/files");
+            const res = await pomFetch("/api/playwright-pom/record/files");
             const data = await res.json();
             setRecordings(data.files || []);
         } catch {
@@ -296,7 +304,7 @@ export const LocatorManagementView = () => {
             return;
         }
         try {
-            const res = await fetch("/api/playwright-pom/locators/update", {
+            const res = await pomFetch("/api/playwright-pom/locators/update", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -338,13 +346,13 @@ export const LocatorManagementView = () => {
             setAiLoading(true);
             let recordingContent = null;
             if (selectedRecording) {
-                const res = await fetch(
+                const res = await pomFetch(
                     `/api/playwright-pom/record/load/${encodeURIComponent(selectedRecording)}`
                 );
                 const data = await res.json();
                 recordingContent = data.content;
             }
-            const res = await fetch("/api/playwright-pom/locators/ai-suggest", {
+            const res = await pomFetch("/api/playwright-pom/locators/ai-suggest", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -369,7 +377,7 @@ export const LocatorManagementView = () => {
             return;
         }
         try {
-            const res = await fetch("/api/playwright-pom/locators/update", {
+            const res = await pomFetch("/api/playwright-pom/locators/update", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({

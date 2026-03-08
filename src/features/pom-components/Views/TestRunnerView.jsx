@@ -5,10 +5,18 @@ import { Button } from '../UI/Button';
 import { PageHeader } from '../UI/PageHeader';
 import { alpha, useTheme } from '@mui/material/styles';
 import { Box, Typography } from '@mui/material';
+import { useAuth } from '@/contexts/AuthContext';
 
 export function TestRunnerView() {
     const theme = useTheme();
     const isDark = theme.palette.mode === 'dark';
+    const { getAuthHeaders } = useAuth();
+    const pomFetch = (input, init = {}) => {
+        const headers = new Headers(init.headers || {});
+        const authHeaders = getAuthHeaders();
+        Object.entries(authHeaders).forEach(([key, value]) => headers.set(key, value));
+        return fetch(input, { ...init, headers });
+    };
 
     const [runningTest, setRunningTest] = useState(false);
     const [testResult, setTestResult] = useState(null);
@@ -22,7 +30,7 @@ export function TestRunnerView() {
 
     // Fetch generated files on mount
     useEffect(() => {
-        fetch('/api/playwright-pom/generate/files')
+        pomFetch('/api/playwright-pom/generate/files')
             .then(res => res.json())
             .then(data => setGeneratedFiles(data.files || []))
             .catch(console.error);
@@ -34,7 +42,7 @@ export function TestRunnerView() {
         if (runningTest) {
             interval = setInterval(async () => {
                 try {
-                    const res = await fetch(`/api/playwright-pom/tests/logs?offset=${logOffset}`);
+                    const res = await pomFetch(`/api/playwright-pom/tests/logs?offset=${logOffset}`);
                     const data = await res.json();
                     if (data.content) {
                         setLiveLogs(prev => prev + data.content);
@@ -65,7 +73,7 @@ export function TestRunnerView() {
             setRunningTest(true);
             setTestResult(null);
             setError(null);
-            const res = await fetch('/api/playwright-pom/tests/run', {
+            const res = await pomFetch('/api/playwright-pom/tests/run', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({})
@@ -91,7 +99,7 @@ export function TestRunnerView() {
         try {
             setPublishing(true);
             setError(null);
-            const res = await fetch('/api/playwright-pom/publish', {
+            const res = await pomFetch('/api/playwright-pom/publish', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

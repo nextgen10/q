@@ -4,10 +4,12 @@ import { AlertCircle, ArrowRight, Brain, CheckCircle, Code, Copy, Download, Figm
 import { StatusSnackbar } from '../UI/StatusSnackbar';
 import { alpha, useTheme } from '@mui/material/styles';
 import axios from 'axios';
+import { useAuth } from '@/contexts/AuthContext';
 
 export function TestDesignView() {
     const theme = useTheme();
     const isDark = theme.palette.mode === 'dark';
+    const { getAuthHeaders } = useAuth();
 
     const [userStory, setUserStory] = useState('');
     const [figmaUrl, setFigmaUrl] = useState('');
@@ -33,7 +35,7 @@ export function TestDesignView() {
     useEffect(() => {
         const fetchLatestData = async () => {
             try {
-                const response = await axios.get(`${API_BASE}/latest`);
+                const response = await axios.get(`${API_BASE}/latest`, authConfig());
                 const { test_cases, metadata, user_story } = response.data;
 
                 if (test_cases && test_cases.length > 0) {
@@ -51,6 +53,12 @@ export function TestDesignView() {
     }, []);
 
     const API_BASE = '/api/playwright-pom/v1/test-design';
+    const authConfig = (extraHeaders = {}) => ({
+        headers: {
+            ...getAuthHeaders(),
+            ...extraHeaders,
+        },
+    });
 
     const handleFileUpload = (e) => {
         const files = Array.from(e.target.files).slice(0, 5);
@@ -107,9 +115,11 @@ export function TestDesignView() {
             if (figmaUrl.trim()) formData.append('figma_url', figmaUrl);
             attachments.forEach(file => formData.append('attachments', file));
 
-            const response = await axios.post(`${API_BASE}/generate`, formData, {
-                headers: { 'Content-Type': 'multipart/form-data' }
-            });
+            const response = await axios.post(
+                `${API_BASE}/generate`,
+                formData,
+                authConfig({ 'Content-Type': 'multipart/form-data' }),
+            );
 
             console.log("RAW API RESPONSE:", response.data);
 
@@ -140,10 +150,14 @@ export function TestDesignView() {
 
     const handleFeedback = async () => {
         try {
-            await axios.post(`${API_BASE}/feedback`, {
-                story_id: metadata?.story_id,
-                ...currentFeedback
-            });
+            await axios.post(
+                `${API_BASE}/feedback`,
+                {
+                    story_id: metadata?.story_id,
+                    ...currentFeedback,
+                },
+                authConfig(),
+            );
             showNotification("Thank you for your feedback!", "success");
             setFeedbackVisible(false);
         } catch (error) {

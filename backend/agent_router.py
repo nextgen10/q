@@ -7,7 +7,6 @@ import json
 import asyncio
 import logging
 import uuid
-import re
 from datetime import datetime
 
 from agent_models import (
@@ -25,8 +24,8 @@ from agent_convert_json import flatten_json, convert_to_expected_format, convert
 from agent_database import init_db, save_result, get_latest_result, save_feedback, get_all_feedback, get_all_results, get_all_prompts, get_prompt, respond_to_feedback
 from auth import (
     init_auth_tables, get_current_app, get_optional_app,
-    register_application, list_applications, rotate_api_key, delete_application, login_with_key,
-    is_admin,
+    register_user, list_applications, rotate_api_key, delete_application, login_with_credentials,
+    is_admin, require_app_access, has_app_access, validate_api_key,
 )
 
 logger = logging.getLogger(__name__)
@@ -110,14 +109,15 @@ async def sse_endpoint(request: Request, token: Optional[str] = Query(None)):
     """
     if not token:
         raise HTTPException(status_code=401, detail="Missing token query parameter")
-    from auth import validate_api_key
     app_info = validate_api_key(token)
     if not app_info:
         raise HTTPException(status_code=401, detail="Invalid or inactive API key")
+    if not has_app_access(app_info, "AGENT_EVAL"):
+        raise HTTPException(status_code=403, detail="Access denied for AGENT_EVAL")
     return StreamingResponse(event_generator(request, app_info["app_id"]), media_type="text/event-stream")
 
 @router.get("/latest-result")
-async def get_latest_evaluation_endpoint(app: Dict = Depends(get_current_app)):
+async def get_latest_evaluation_endpoint(app: Dict = Depends(require_app_access("AGENT_EVAL"))):
     """Get the latest evaluation result, scoped to the caller's application."""
     result = get_latest_result(app_id=app["app_id"])
     if not result:
@@ -125,7 +125,7 @@ async def get_latest_evaluation_endpoint(app: Dict = Depends(get_current_app)):
     return result
 
 @router.get("/history")
-async def get_history_endpoint(app: Dict = Depends(get_current_app)):
+async def get_history_endpoint(app: Dict = Depends(require_app_access("AGENT_EVAL"))):
     """Get historical evaluation results, scoped to the caller's application."""
     return get_all_results(app_id=app["app_id"])
 
@@ -148,7 +148,7 @@ class ConvertRequestModel(BaseModel):
 MAX_BATCH_SIZE = 500
 
 @router.post("/run-batch", response_model=BatchTestResult)
-async def run_batch(requests: List[TestRequest], app: Dict = Depends(get_current_app)):
+async def run_batch(requests: List[TestRequest], app: Dict = Depends(require_app_access("AGENT_EVAL"))):
     if len(requests) > MAX_BATCH_SIZE:
         raise HTTPException(status_code=400, detail=f"Batch size exceeds limit of {MAX_BATCH_SIZE}")
     app_id = app["app_id"]
@@ -181,7 +181,7 @@ async def run_batch(requests: List[TestRequest], app: Dict = Depends(get_current
         raise HTTPException(status_code=500, detail="Batch execution failed. Please check your inputs and try again.")
 
 @router.post("/convert-json")
-async def convert_json_endpoint(request: ConvertRequestModel, app: Dict = Depends(get_current_app)):
+async def convert_json_endpoint(request: ConvertRequestModel, app: Dict = Depends(require_app_access("AGENT_EVAL"))):
     try:
         data = request.data
         mode = request.mode
@@ -228,7 +228,7 @@ async def convert_json_endpoint(request: ConvertRequestModel, app: Dict = Depend
         raise HTTPException(status_code=400, detail="JSON conversion failed. Check input format.")
 
 @router.post("/evaluate-from-json", response_model=BatchTestResult)
-async def evaluate_from_json(request: JsonEvaluationRequest, app: Dict = Depends(get_current_app)):
+async def evaluate_from_json(request: JsonEvaluationRequest, app: Dict = Depends(require_app_access("AGENT_EVAL"))):
     if len(request.ground_truth) > MAX_BATCH_SIZE:
         raise HTTPException(status_code=400, detail=f"Ground truth size exceeds limit of {MAX_BATCH_SIZE}")
     if len(request.ai_outputs) > MAX_BATCH_SIZE:
@@ -360,7 +360,7 @@ def _validate_file_path(path: str) -> str:
     return resolved
 
 @router.post("/evaluate-from-paths", response_model=BatchTestResult)
-async def evaluate_from_paths(request: BatchPathRequest, app: Dict = Depends(get_current_app)):
+async def evaluate_from_paths(request: BatchPathRequest, app: Dict = Depends(require_app_access("AGENT_EVAL"))):
     """
     Evaluate from local file paths.
     """
@@ -473,7 +473,7 @@ class FeedbackResponseRequest(BaseModel):
 
 
 @router.post("/feedback/{feedback_id}/respond")
-async def admin_respond_feedback(feedback_id: int, req: FeedbackResponseRequest, app: Dict = Depends(get_current_app)):
+async def admin_respond_feedback(feedback_id: int, req: FeedbackResponseRequest, app: Dict = Depends(require_app_access("AGENT_EVAL"))):
     """Admin-only: add a response to a feedback entry."""
     if not is_admin(app["app_id"]):
         raise HTTPException(status_code=403, detail="Only the admin can respond to feedback")
@@ -485,7 +485,7 @@ async def admin_respond_feedback(feedback_id: int, req: FeedbackResponseRequest,
 
 
 @router.get("/feedback/admin-check")
-async def check_admin(app: Dict = Depends(get_current_app)):
+async def check_admin(app: Dict = Depends(require_app_access("AGENT_EVAL"))):
     """Check if the authenticated app is the admin."""
     return {"is_admin": is_admin(app["app_id"])}
 
@@ -493,32 +493,35 @@ async def check_admin(app: Dict = Depends(get_current_app)):
 # ─── Application Auth API ────────────────────────────────────
 
 class RegisterAppRequest(BaseModel):
-    app_name: str
+    username: str
+    password: str
+    requested_access: str = "ALL"
     owner_email: str = ""
 
 class LoginRequest(BaseModel):
-    api_key: str
-
-APP_NAME_REGEX = re.compile(r'^[A-Za-z0-9]{1,15}$')
+    username: str
+    password: str
 
 @router.post("/apps/register")
 async def register_app(req: RegisterAppRequest):
-    """Register a new application and receive an API key."""
-    normalized_name = (req.app_name or "").strip()
-    if not APP_NAME_REGEX.match(normalized_name):
-        raise HTTPException(status_code=400, detail="Application name must be alphanumeric and 1-15 characters")
+    """Register a new account and receive app credentials/session metadata."""
     try:
-        creds = register_application(normalized_name, req.owner_email.strip())
+        creds = register_user(
+            username=req.username,
+            password=req.password,
+            requested_access=req.requested_access,
+            owner_email=req.owner_email.strip(),
+        )
         return creds
     except ValueError as e:
-        raise HTTPException(status_code=409, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e))
 
 @router.post("/apps/login")
 async def login(req: LoginRequest):
-    """Validate API key and return app info for UI session."""
-    info = login_with_key(req.api_key)
+    """Validate username/password and return app info for UI session."""
+    info = login_with_credentials(req.username, req.password)
     if not info:
-        raise HTTPException(status_code=401, detail="Invalid API key")
+        raise HTTPException(status_code=401, detail="Invalid username or password")
     return info
 
 @router.get("/apps")

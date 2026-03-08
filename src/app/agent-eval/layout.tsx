@@ -41,7 +41,7 @@ export default function AgentEvalLayout({
     }));
 
     return (
-        <AuthGuard>
+        <AuthGuard requiredAccess="AGENT_EVAL">
         <EvaluationProvider>
             <CopyProtection />
             <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', bgcolor: 'background.default', color: 'text.primary' }}>

@@ -67,27 +67,28 @@ from agent_router import router as agent_router
 app.include_router(agent_router)
 
 from studio.backend.routers import recorder, generator, runner, workflow, settings, ai, locators, feedback, prompts, test_design, healer, roi, data
+from auth import require_app_access
 
-app.include_router(recorder.router)
-app.include_router(generator.router)
-app.include_router(runner.router)
-app.include_router(workflow.router)
-app.include_router(settings.router)
-app.include_router(ai.router)
-app.include_router(locators.router)
-app.include_router(feedback.router)
-app.include_router(prompts.router)
-app.include_router(test_design.router)
-app.include_router(healer.router)
-app.include_router(roi.router)
-app.include_router(data.router)
+_playwright_access = [Depends(require_app_access("PLAYWRIGHT_POM"))]
+app.include_router(recorder.router, dependencies=_playwright_access)
+app.include_router(generator.router, dependencies=_playwright_access)
+app.include_router(runner.router, dependencies=_playwright_access)
+app.include_router(workflow.router, dependencies=_playwright_access)
+app.include_router(settings.router, dependencies=_playwright_access)
+app.include_router(ai.router, dependencies=_playwright_access)
+app.include_router(locators.router, dependencies=_playwright_access)
+app.include_router(feedback.router, dependencies=_playwright_access)
+app.include_router(prompts.router, dependencies=_playwright_access)
+app.include_router(test_design.router, dependencies=_playwright_access)
+app.include_router(healer.router, dependencies=_playwright_access)
+app.include_router(roi.router, dependencies=_playwright_access)
+app.include_router(data.router, dependencies=_playwright_access)
 
 @app.get("/health")
 def health_check():
     return {"status": "ok", "message": "Studio Backend is running (Modular)"}
 
 from nexus_database import SessionLocal, EvaluationRecord
-from auth import get_current_app
 import json
 import logging
 
@@ -114,7 +115,7 @@ def save_to_db(result: EvaluationResult, app_id: str | None = None):
         db.close()
 
 @app.get("/latest", response_model=EvaluationResult)
-async def get_latest_evaluation(app: Dict = Depends(get_current_app)):
+async def get_latest_evaluation(app: Dict = Depends(require_app_access("RAG_EVAL"))):
     db = SessionLocal()
     try:
         record = (
@@ -149,7 +150,7 @@ async def evaluate_excel(
     max_rows: int = Form(200),
     temperature: float = Form(0.0),
     background_tasks: BackgroundTasks = None,
-    app: Dict = Depends(get_current_app),
+    app: Dict = Depends(require_app_access("RAG_EVAL")),
 ):
     if background_tasks:
         background_tasks.add_task(cleanup_cache)
@@ -259,7 +260,7 @@ async def evaluate_excel(
         raise HTTPException(status_code=400, detail="Excel processing failed. Check file format and try again.")
 
 @app.post("/evaluate", response_model=EvaluationResult)
-async def run_evaluation(request: EvaluationRequest, background_tasks: BackgroundTasks, app: Dict = Depends(get_current_app)):
+async def run_evaluation(request: EvaluationRequest, background_tasks: BackgroundTasks, app: Dict = Depends(require_app_access("RAG_EVAL"))):
     if not request.dataset:
         raise HTTPException(status_code=400, detail="Dataset is empty. Provide at least one test case.")
 
@@ -302,7 +303,7 @@ async def run_evaluation(request: EvaluationRequest, background_tasks: Backgroun
         raise HTTPException(status_code=500, detail="Evaluation failed. Please try again.")
 
 @app.get("/evaluations", response_model=List[EvaluationSummary])
-async def get_all_evaluations(app: Dict = Depends(get_current_app)):
+async def get_all_evaluations(app: Dict = Depends(require_app_access("RAG_EVAL"))):
     db = SessionLocal()
     try:
         records = (
@@ -327,7 +328,7 @@ async def get_all_evaluations(app: Dict = Depends(get_current_app)):
         db.close()
 
 @app.delete("/cache/cleanup")
-async def cleanup_cache(app: Dict = Depends(get_current_app)):
+async def cleanup_cache(app: Dict = Depends(require_app_access("RAG_EVAL"))):
     """Removes metric cache entries older than 30 days."""
     db = SessionLocal()
     from nexus_database import MetricCache
@@ -341,7 +342,7 @@ async def cleanup_cache(app: Dict = Depends(get_current_app)):
         db.close()
 
 @app.get("/evaluations/{eval_id}")
-async def get_evaluation(eval_id: str, app: Dict = Depends(get_current_app)):
+async def get_evaluation(eval_id: str, app: Dict = Depends(require_app_access("RAG_EVAL"))):
     db = SessionLocal()
     try:
         record = (
@@ -356,7 +357,7 @@ async def get_evaluation(eval_id: str, app: Dict = Depends(get_current_app)):
         db.close()
 
 @app.get("/rag/prompts")
-async def get_rag_prompts():
+async def get_rag_prompts(app: Dict = Depends(require_app_access("RAG_EVAL"))):
     """Get all RAG evaluation prompts"""
     import glob
     import json as json_lib

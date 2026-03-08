@@ -8,6 +8,7 @@ import {
 import { Menu as MenuIcon, X } from 'lucide-react';
 import { UbsLogoFull } from './UbsLogoFull';
 import { BrandPipe } from './BrandPipe';
+import AnimatedQualarisWord from './AnimatedQualarisWord';
 
 interface NavItem {
     id: string;
@@ -60,39 +61,7 @@ export const UnifiedNavBar: React.FC<UnifiedNavBarProps> = ({
         if (isQualaris) {
             return (
                 <Typography variant="h6" sx={titleSx}>
-                    {titleStr.split('').map((char, idx) => (
-                        <React.Fragment key={`${char}-${idx}`}>
-                            <Box
-                                component="span"
-                                sx={{
-                                    display: 'inline-block',
-                                    color: idx % 2 === 0 ? 'primary.main' : 'text.primary',
-                                    '@keyframes qualarisWave': {
-                                        '0%, 100%': { transform: 'translateY(0px)', opacity: 0.95 },
-                                        '50%': { transform: 'translateY(-1.5px)', opacity: 1 },
-                                    },
-                                    animation: 'qualarisWave 1.6s ease-in-out infinite',
-                                    animationDelay: `${idx * 0.08}s`,
-                                }}
-                            >
-                                {char}
-                            </Box>
-                            {idx < titleStr.length - 1 && (
-                                <Box
-                                    component="span"
-                                    sx={{
-                                        display: 'inline-block',
-                                        mx: 0.18,
-                                        color: idx % 2 === 0 ? 'text.primary' : 'primary.main',
-                                        opacity: 0.85,
-                                        fontWeight: 700,
-                                    }}
-                                >
-                                    &middot;
-                                </Box>
-                            )}
-                        </React.Fragment>
-                    ))}
+                    <AnimatedQualarisWord />
                 </Typography>
             );
         }

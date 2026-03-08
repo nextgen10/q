@@ -7,13 +7,16 @@ interface AppSession {
     app_id: string;
     app_name: string;
     api_key: string;
+    username?: string;
+    requested_access?: 'RAG_EVAL' | 'AGENT_EVAL' | 'GROUND_TRUTH' | 'PLAYWRIGHT_POM' | 'ALL';
     owner_email?: string;
 }
 
 interface AuthContextValue {
     session: AppSession | null;
-    login: (apiKey: string) => Promise<void>;
-    register: (appName: string, ownerEmail: string) => Promise<AppSession>;
+    login: (username: string, password: string) => Promise<void>;
+    register: (username: string, password: string, ownerEmail: string, requestedAccess: AppSession['requested_access']) => Promise<AppSession>;
+    generateApiKey: () => Promise<string>;
     logout: () => void;
     isAuthenticated: boolean;
     getAuthHeaders: () => Record<string, string>;
@@ -22,8 +25,34 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 const SESSION_KEY = 'nexus_eval_session';
-const APP_NAME_REGEX = /^[A-Za-z0-9]{1,15}$/;
+const USERNAME_REGEX = /^[A-Za-z0-9]{1,32}$/;
 const API_BASE = `${API_ROOT}/agent-eval`;
+
+function toErrorMessage(detail: unknown, fallback: string): string {
+    if (!detail) return fallback;
+    if (typeof detail === 'string') return detail;
+    if (Array.isArray(detail)) {
+        const messages = detail
+            .map((item) => {
+                if (typeof item === 'string') return item;
+                if (item && typeof item === 'object' && 'msg' in item) {
+                    return String((item as { msg?: unknown }).msg ?? '');
+                }
+                return '';
+            })
+            .filter(Boolean);
+        return messages.length ? messages.join('; ') : fallback;
+    }
+    if (typeof detail === 'object') {
+        if ('msg' in detail) {
+            return String((detail as { msg?: unknown }).msg ?? fallback);
+        }
+        if ('message' in detail) {
+            return String((detail as { message?: unknown }).message ?? fallback);
+        }
+    }
+    return fallback;
+}
 
 export function useAuth() {
     const ctx = useContext(AuthContext);
@@ -80,45 +109,87 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
     }, []);
 
-    const login = useCallback(async (apiKey: string) => {
+    const login = useCallback(async (username: string, password: string) => {
         const res = await fetch(`${API_BASE}/apps/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ api_key: apiKey }),
+            body: JSON.stringify({ username, password }),
         });
         if (!res.ok) {
-            const err = await res.json().catch(() => ({ detail: 'Login failed' }));
-            throw new Error(err.detail || 'Invalid API key');
+            const err = await res.json().catch(() => ({}));
+            throw new Error(toErrorMessage(err?.detail, 'Invalid username or password'));
         }
         const data = await res.json();
-        persistSession({ ...data, api_key: apiKey });
+        persistSession({
+            app_id: data.app_id,
+            app_name: data.app_name,
+            api_key: data.api_key,
+            username: data.username,
+            requested_access: data.requested_access || 'ALL',
+            owner_email: data.owner_email,
+        });
     }, [persistSession]);
 
-    const register = useCallback(async (appName: string, ownerEmail: string) => {
-        const normalizedName = appName.trim();
-        if (!APP_NAME_REGEX.test(normalizedName)) {
-            throw new Error('Application name must be alphanumeric and up to 15 characters');
+    const register = useCallback(async (username: string, password: string, ownerEmail: string, requestedAccess: AppSession['requested_access']) => {
+        const normalizedUsername = username.trim();
+        if (!USERNAME_REGEX.test(normalizedUsername)) {
+            throw new Error('Username must be alphanumeric and up to 32 characters');
+        }
+        if (!password || password.length < 4) {
+            throw new Error('Password must be at least 4 characters');
         }
         const res = await fetch(`${API_BASE}/apps/register`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ app_name: normalizedName, owner_email: ownerEmail }),
+            body: JSON.stringify({
+                username: normalizedUsername,
+                password,
+                owner_email: ownerEmail,
+                requested_access: requestedAccess || 'ALL',
+            }),
         });
         if (!res.ok) {
-            const err = await res.json().catch(() => ({ detail: 'Registration failed' }));
-            throw new Error(err.detail || 'Registration failed');
+            const err = await res.json().catch(() => ({}));
+            throw new Error(toErrorMessage(err?.detail, 'Registration failed'));
         }
         const data = await res.json();
         return {
             app_id: data.app_id,
             app_name: data.app_name,
             api_key: data.api_key,
+            username: data.username,
+            requested_access: data.requested_access || 'ALL',
+            owner_email: ownerEmail,
         } as AppSession;
     }, []);
 
     const logout = useCallback(() => {
         persistSession(null);
     }, [persistSession]);
+
+    const generateApiKey = useCallback(async (): Promise<string> => {
+        if (!session?.app_id || !session?.api_key) {
+            throw new Error('No active session found');
+        }
+        const res = await fetch(`${API_BASE}/apps/${session.app_id}/rotate-key`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-API-Key': session.api_key,
+            },
+        });
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(toErrorMessage(err?.detail, 'Failed to generate API key'));
+        }
+        const data = await res.json();
+        const nextSession: AppSession = {
+            ...session,
+            api_key: data.api_key,
+        };
+        persistSession(nextSession);
+        return data.api_key;
+    }, [session, persistSession]);
 
     const getAuthHeaders = useCallback((): Record<string, string> => {
         if (!session?.api_key) return {};
@@ -129,10 +200,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         session,
         login,
         register,
+        generateApiKey,
         logout,
         isAuthenticated: !!session,
         getAuthHeaders,
-    }), [session, login, register, logout, getAuthHeaders]);
+    }), [session, login, register, generateApiKey, logout, getAuthHeaders]);
 
     if (!loaded) return null;
 

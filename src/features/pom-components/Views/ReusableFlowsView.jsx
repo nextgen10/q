@@ -12,9 +12,17 @@ import {
 import { alpha, useTheme } from "@mui/material/styles";
 import { ChevronDown, ChevronRight, FileCode, Layers, RefreshCw, Rocket, Sparkles } from "lucide-react";
 import { StatusSnackbar } from "../UI/StatusSnackbar";
+import { useAuth } from "@/contexts/AuthContext";
 
 export function ReusableFlowsView() {
     const theme = useTheme();
+    const { getAuthHeaders } = useAuth();
+    const pomFetch = (input, init = {}) => {
+        const headers = new Headers(init.headers || {});
+        const authHeaders = getAuthHeaders();
+        Object.entries(authHeaders).forEach(([key, value]) => headers.set(key, value));
+        return fetch(input, { ...init, headers });
+    };
     const [sharedFlows, setSharedFlows] = useState([]);
     const [loadingFlows, setLoadingFlows] = useState(false);
     const [status, setStatus] = useState(null);
@@ -23,7 +31,7 @@ export function ReusableFlowsView() {
     const fetchSharedFlows = async () => {
         try {
             setLoadingFlows(true);
-            const res = await fetch("/api/playwright-pom/shared-flows");
+            const res = await pomFetch("/api/playwright-pom/shared-flows");
             const data = await res.json();
             setSharedFlows(data.flows || []);
         } catch (err) {

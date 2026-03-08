@@ -56,10 +56,17 @@ export const AIChatWindow = ({
     };
 
     return (
-        <div className={`fixed bottom-24 right-6 w-[560px] h-[600px] flex flex-col rounded-3xl border transition-all duration-300 transform animate-in fade-in slide-in-from-bottom-4 ${isDark
-            ? 'bg-[#1e1e1e] border-red-500/35 ring-1 ring-white/10 shadow-2xl'
-            : 'bg-white border-red-200 ring-1 ring-black/5 shadow-2xl'
-            } z-[100] overflow-hidden`}>
+        <div
+            className={`fixed bottom-24 right-6 w-[560px] h-[600px] flex flex-col rounded-3xl border transition-all duration-300 transform animate-in fade-in slide-in-from-bottom-4 ${isDark
+            ? 'bg-[#1e1e1e] border-red-500/35 ring-1 ring-white/10'
+            : 'bg-white border-red-200 ring-1 ring-black/5'
+            } z-[100] overflow-hidden`}
+            style={{
+                boxShadow: isDark
+                    ? '0 0 0 1px rgba(208,0,0,0.30), 0 0 28px rgba(208,0,0,0.28), 0 14px 34px rgba(0,0,0,0.52)'
+                    : '0 0 0 1px rgba(208,0,0,0.22), 0 0 22px rgba(208,0,0,0.22), 0 12px 30px rgba(0,0,0,0.16)',
+            }}
+        >
 
             {/* Header: Pure Modernist */}
             <div className={`flex items-center justify-between border-b ${isDark ? 'bg-[#252526] border-[#333]' : 'bg-gray-50 border-gray-200'}`} style={{ minHeight: 66, padding: '12px 20px' }}>
@@ -72,7 +79,7 @@ export const AIChatWindow = ({
                             Playwright Coding Assistant
                         </h3>
                         <div className="flex items-center gap-1.5 min-w-0">
-                            <div className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                            <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
                             <span className={`text-xs opacity-50 ${isDark ? 'text-zinc-400' : 'text-zinc-500'}`}>
                                 Online
                             </span>

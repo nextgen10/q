@@ -55,6 +55,7 @@ import {
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus, vs } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { StatusSnackbar } from "../UI/StatusSnackbar";
+import { useAuth } from "@/contexts/AuthContext";
 
 const PREVIEW_TABS = ["test", "page", "locator", "data"];
 
@@ -62,6 +63,13 @@ export function TestExecutionView() {
     const theme = useTheme();
     const isDark = theme.palette.mode === "dark";
     const logsEndRef = useRef(null);
+    const { getAuthHeaders } = useAuth();
+    const pomFetch = (input, init = {}) => {
+        const headers = new Headers(init.headers || {});
+        const authHeaders = getAuthHeaders();
+        Object.entries(authHeaders).forEach(([key, value]) => headers.set(key, value));
+        return fetch(input, { ...init, headers });
+    };
 
     const [tests, setTests] = useState([]);
     const [selectedTests, setSelectedTests] = useState(new Set());
@@ -110,7 +118,7 @@ export function TestExecutionView() {
 
     const fetchSettings = async () => {
         try {
-            const res = await fetch("/api/playwright-pom/settings");
+            const res = await pomFetch("/api/playwright-pom/settings");
             const data = await res.json();
             if (data.default_parallel_workers) {
                 setDefaultWorkers(data.default_parallel_workers);
@@ -122,7 +130,7 @@ export function TestExecutionView() {
 
     const fetchMarkers = async () => {
         try {
-            const res = await fetch("/api/playwright-pom/settings");
+            const res = await pomFetch("/api/playwright-pom/settings");
             const data = await res.json();
             if (data.markers) {
                 setAvailableMarkers(data.markers);
@@ -137,7 +145,7 @@ export function TestExecutionView() {
         if (running) {
             interval = setInterval(async () => {
                 try {
-                    const res = await fetch(`/api/playwright-pom/tests/logs?offset=${logOffset}`);
+                    const res = await pomFetch(`/api/playwright-pom/tests/logs?offset=${logOffset}`);
                     const data = await res.json();
                     if (data.content) {
                         setLiveLogs((prev) => prev + data.content);
@@ -163,7 +171,7 @@ export function TestExecutionView() {
 
     const fetchTests = async () => {
         try {
-            const res = await fetch("/api/playwright-pom/tests/list");
+            const res = await pomFetch("/api/playwright-pom/tests/list");
             const data = await res.json();
             const normalizedTests = (data.tests || []).map((t) =>
                 typeof t === "string" ? { path: t, name: t, folder: null } : t
@@ -213,7 +221,7 @@ export function TestExecutionView() {
             setReportAvailable(false);
             setAutoScroll(true);
 
-            const res = await fetch("/api/playwright-pom/tests/run", {
+            const res = await pomFetch("/api/playwright-pom/tests/run", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payload),
@@ -232,6 +240,32 @@ export function TestExecutionView() {
         } finally {
             setRunning(false);
             setRunningMode(null);
+        }
+    };
+
+    const handleDownloadReport = async () => {
+        try {
+            const headers = new Headers();
+            const authHeaders = getAuthHeaders();
+            Object.entries(authHeaders).forEach(([key, value]) => headers.set(key, value));
+            const res = await fetch("/api/tests/report/download", { method: "GET", headers });
+            if (!res.ok) throw new Error(`Download failed (${res.status})`);
+
+            const blob = await res.blob();
+            const disposition = res.headers.get("content-disposition") || "";
+            const match = disposition.match(/filename=\"?([^\"]+)\"?/i);
+            const filename = match?.[1] || "extent_report.html";
+
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            URL.revokeObjectURL(url);
+        } catch (e) {
+            showStatus(e.message || "Failed to download report", "error");
         }
     };
 
@@ -334,7 +368,7 @@ export function TestExecutionView() {
 
         try {
             const deletePromises = Array.from(selectedTests).map((path) =>
-                fetch(`/api/playwright-pom/tests/delete/${path}`, { method: "DELETE" })
+                pomFetch(`/api/playwright-pom/tests/delete/${path}`, { method: "DELETE" })
             );
             await Promise.all(deletePromises);
             fetchTests();
@@ -368,7 +402,7 @@ export function TestExecutionView() {
         }
 
         try {
-            const res = await fetch("/api/playwright-pom/tests/assign-marker", {
+            const res = await pomFetch("/api/playwright-pom/tests/assign-marker", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -394,7 +428,7 @@ export function TestExecutionView() {
             return;
         }
         try {
-            const res = await fetch("/api/playwright-pom/tests/remove-marker", {
+            const res = await pomFetch("/api/playwright-pom/tests/remove-marker", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -868,7 +902,7 @@ export function TestExecutionView() {
                                                 <IconButton
                                                     size="small"
                                                     color="error"
-                                                    onClick={() => window.open("/api/tests/report/download", "_blank")}
+                                                    onClick={handleDownloadReport}
                                                     disabled={!reportAvailable || running}
                                                     sx={{
                                                         border: "1px solid",

@@ -3,9 +3,9 @@
 import React, { useState } from 'react';
 import {
     Box, Typography, Menu, MenuItem, ListItemIcon, ListItemText,
-    Chip, alpha, useTheme, Divider,
+    Chip, alpha, useTheme, Divider, Dialog, DialogTitle, DialogContent, DialogActions, Button, IconButton,
 } from '@mui/material';
-import { LogOut, Building2, ChevronDown } from 'lucide-react';
+import { LogOut, Building2, ChevronDown, KeyRound, Copy, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 
@@ -16,14 +16,43 @@ interface AppIdentityBadgeProps {
 
 export default function AppIdentityBadge({ appName, appId }: AppIdentityBadgeProps) {
     const theme = useTheme();
-    const { logout } = useAuth();
+    const { logout, generateApiKey } = useAuth();
     const router = useRouter();
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+    const [apiKeyDialogOpen, setApiKeyDialogOpen] = useState(false);
+    const [generatedKey, setGeneratedKey] = useState('');
+    const [keyLoading, setKeyLoading] = useState(false);
+    const [copied, setCopied] = useState(false);
+    const [keyError, setKeyError] = useState('');
 
     const handleLogout = () => {
         setAnchorEl(null);
         logout();
         router.push('/login');
+    };
+
+    const handleGenerateApiKey = async () => {
+        setAnchorEl(null);
+        setKeyError('');
+        setCopied(false);
+        setKeyLoading(true);
+        try {
+            const key = await generateApiKey();
+            setGeneratedKey(key);
+            setApiKeyDialogOpen(true);
+        } catch (error: unknown) {
+            setKeyError(error instanceof Error ? error.message : 'Failed to generate API key');
+            setApiKeyDialogOpen(true);
+        } finally {
+            setKeyLoading(false);
+        }
+    };
+
+    const handleCopy = async () => {
+        if (!generatedKey) return;
+        await navigator.clipboard.writeText(generatedKey);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1500);
     };
 
     return (
@@ -72,6 +101,16 @@ export default function AppIdentityBadge({ appName, appId }: AppIdentityBadgePro
                     </Typography>
                 </Box>
                 <Divider />
+                <MenuItem onClick={handleGenerateApiKey} disabled={keyLoading}>
+                    <ListItemIcon>
+                        <KeyRound size={16} color={theme.palette.error.main} />
+                    </ListItemIcon>
+                    <ListItemText>
+                        <Typography variant="body2" color="error.main">
+                            {keyLoading ? 'Generating API Key...' : 'Generate API Key'}
+                        </Typography>
+                    </ListItemText>
+                </MenuItem>
                 <MenuItem onClick={handleLogout}>
                     <ListItemIcon>
                         <LogOut size={16} color={theme.palette.error.main} />
@@ -81,6 +120,50 @@ export default function AppIdentityBadge({ appName, appId }: AppIdentityBadgePro
                     </ListItemText>
                 </MenuItem>
             </Menu>
+            <Dialog
+                open={apiKeyDialogOpen}
+                onClose={() => setApiKeyDialogOpen(false)}
+                fullWidth
+                maxWidth="sm"
+            >
+                <DialogTitle sx={{ fontWeight: 700 }}>Generated API Key</DialogTitle>
+                <DialogContent>
+                    {keyError ? (
+                        <Typography variant="body2" color="error.main">{keyError}</Typography>
+                    ) : (
+                        <>
+                            <Typography variant="body2" color="text.secondary" sx={{ mb: 1.25 }}>
+                                Previous key was replaced in DB. Save this key now.
+                            </Typography>
+                            <Box
+                                sx={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 1,
+                                    px: 1.5,
+                                    py: 1,
+                                    borderRadius: 1,
+                                    border: '1px solid',
+                                    borderColor: 'divider',
+                                    fontFamily: 'monospace',
+                                    fontSize: '0.78rem',
+                                    wordBreak: 'break-all',
+                                }}
+                            >
+                                <Box sx={{ flex: 1 }}>{generatedKey}</Box>
+                                <IconButton size="small" onClick={handleCopy} aria-label="Copy API key">
+                                    {copied ? <CheckCircle2 size={16} color={theme.palette.success.main} /> : <Copy size={16} />}
+                                </IconButton>
+                            </Box>
+                        </>
+                    )}
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setApiKeyDialogOpen(false)} color="error" variant="contained">
+                        Close
+                    </Button>
+                </DialogActions>
+            </Dialog>
         </>
     );
 }
