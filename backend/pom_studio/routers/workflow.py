@@ -5,6 +5,7 @@ from pydantic import BaseModel
 import ast
 import re
 import json
+import textwrap
 
 router = APIRouter(prefix="/api", tags=["workflow"])
 
@@ -15,28 +16,128 @@ def get_root_dir():
 @router.get("/shared-flows")
 def list_shared_flows():
     """Extract and list all methods in SharedFlows for the Studio Gallery."""
-    import ast
     root_dir = get_root_dir()
     shared_flows_path = os.path.join(root_dir, "flows", "shared_flows.py")
     
     if not os.path.exists(shared_flows_path):
         return {"flows": []}
         
-    try:
-        with open(shared_flows_path, "r") as f:
-            tree = ast.parse(f.read())
-        
+    def parse_flows_with_ast(file_content: str):
         flows = []
+        lines = file_content.splitlines()
+        tree = ast.parse(file_content)
         for node in ast.walk(tree):
             if isinstance(node, ast.ClassDef) and node.name == "SharedFlows":
                 for item in node.body:
                     if isinstance(item, ast.FunctionDef) and item.name != "__init__":
                         docstring = ast.get_docstring(item) or "No description provided."
+                        method_code = ""
+                        if hasattr(item, "lineno") and hasattr(item, "end_lineno"):
+                            method_code = "\n".join(lines[item.lineno - 1:item.end_lineno]).rstrip()
                         flows.append({
                             "name": item.name,
                             "description": docstring,
-                            "parameters": [arg.arg for arg in item.args.args if arg.arg != 'self']
+                            "parameters": [arg.arg for arg in item.args.args if arg.arg != 'self'],
+                            "code": method_code,
                         })
+        return flows
+
+    def parse_flows_fallback(file_content: str):
+        """
+        Best-effort parser for malformed files.
+        Extracts method signatures/docstrings under class SharedFlows even if AST parsing fails.
+        """
+        flows = []
+        lines = file_content.splitlines()
+        in_shared_flows = False
+        i = 0
+
+        while i < len(lines):
+            line = lines[i]
+            stripped = line.strip()
+
+            if stripped.startswith("class SharedFlows"):
+                in_shared_flows = True
+                i += 1
+                continue
+
+            if in_shared_flows and re.match(r"^class\s+\w+", stripped) and not stripped.startswith("class SharedFlows"):
+                break
+
+            def_match = re.match(r"^\s{4}def\s+([a-zA-Z_]\w*)\s*\((.*?)\)\s*:", line)
+            if in_shared_flows and def_match:
+                method_name = def_match.group(1)
+                if method_name == "__init__":
+                    i += 1
+                    continue
+
+                raw_args = def_match.group(2)
+                parameters = []
+                for token in [p.strip() for p in raw_args.split(",") if p.strip()]:
+                    if token == "self":
+                        continue
+                    token = token.split(":")[0].strip()
+                    token = token.split("=")[0].strip()
+                    if token and token != "self":
+                        parameters.append(token)
+
+                description = "No description provided."
+                j = i + 1
+                if j < len(lines) and re.match(r'^\s{8}("""|\'\'\')', lines[j]):
+                    quote = '"""' if '"""' in lines[j] else "'''"
+                    doc_lines = []
+                    first = lines[j].split(quote, 1)[1]
+                    if quote in first:
+                        description = first.split(quote, 1)[0].strip() or description
+                    else:
+                        if first.strip():
+                            doc_lines.append(first.strip())
+                        j += 1
+                        while j < len(lines):
+                            current = lines[j]
+                            if quote in current:
+                                before = current.split(quote, 1)[0].strip()
+                                if before:
+                                    doc_lines.append(before)
+                                break
+                            doc_lines.append(current.strip())
+                            j += 1
+                        joined = " ".join([d for d in doc_lines if d]).strip()
+                        if joined:
+                            description = joined
+
+                code_start = i
+                code_end = i + 1
+                while code_end < len(lines):
+                    next_line = lines[code_end]
+                    next_stripped = next_line.strip()
+                    if re.match(r"^\s{4}def\s+[a-zA-Z_]\w*\s*\(", next_line):
+                        break
+                    if re.match(r"^class\s+\w+", next_stripped):
+                        break
+                    code_end += 1
+                method_code = "\n".join(lines[code_start:code_end]).rstrip()
+
+                flows.append({
+                    "name": method_name,
+                    "description": description,
+                    "parameters": parameters,
+                    "code": method_code,
+                })
+
+            i += 1
+
+        return flows
+
+    try:
+        with open(shared_flows_path, "r") as f:
+            file_content = f.read()
+
+        try:
+            flows = parse_flows_with_ast(file_content)
+        except SyntaxError:
+            flows = parse_flows_fallback(file_content)
+
         return {"flows": flows}
     except Exception as e:
         return {"error": str(e), "flows": []}
@@ -95,16 +196,20 @@ def extract_snippet(request: ExtractSnippetRequest):
         # 3. Convert nodes back to code (using AST unparse)
         selected_code = []
         for node in selected_nodes:
-            # We want to keep the raw logic but eventually POM-ify it?
-            # For now, let's just take the raw code segment
-            # Python 3.9+ has ast.unparse
-            selected_code.append(ast.unparse(node))
-            
-        snippet_body = "\n        ".join(selected_code)
+            # Indent each unparsed node block safely to remain valid inside method body.
+            selected_code.append(textwrap.indent(ast.unparse(node), "        "))
+
+        snippet_body = "\n".join(selected_code)
         
         # 4. Format method
         method_name = request.snippet_name.lower().replace(" ", "_")
-        new_method = f"\n    def {method_name}(self, data: dict):\n        \"\"\"\n        Extracted snippet: {request.snippet_name}\n        \"\"\"\n        {snippet_body}\n"
+        new_method = (
+            f"\n    def {method_name}(self, data: dict):\n"
+            f"        \"\"\"\n"
+            f"        Extracted snippet: {request.snippet_name}\n"
+            f"        \"\"\"\n"
+            f"{snippet_body}\n"
+        )
         
         # 5. Append to target flow file
         target_path = os.path.join(root_dir, request.target_flow_file)

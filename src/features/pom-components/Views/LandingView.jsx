@@ -196,7 +196,16 @@ export const LandingView = ({ onGetStarted }) => {
                 if (!response.ok) return;
                 const data = await response.json();
                 const aiFeedback = (Array.isArray(data) ? data : [])
-                    .filter((item) => item?.category === 'ai_generation')
+                    .filter((item) => {
+                        const category = String(item?.category || '').toLowerCase();
+                        const categoryLabel = String(item?.categoryLabel || item?.category_label || '').toLowerCase();
+                        const title = String(item?.title || '').toLowerCase();
+                        return (
+                            category === 'ai_generation' ||
+                            categoryLabel === 'ai generation' ||
+                            title.includes('test design')
+                        );
+                    })
                     .sort((a, b) => new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime())
                     .slice(0, 3);
 
@@ -331,7 +340,9 @@ export const LandingView = ({ onGetStarted }) => {
                     height: 'calc(100vh - 64px)',
                     display: 'flex',
                     flexDirection: 'column',
-                    justifyContent: 'center',
+                    justifyContent: testDesignFeedback.length > 0 ? 'flex-start' : 'center',
+                    overflowY: 'auto',
+                    py: testDesignFeedback.length > 0 ? 2 : 0,
                     gap: 3,
                 }}
             >
@@ -580,28 +591,42 @@ export const LandingView = ({ onGetStarted }) => {
                 </Box>
 
                 {/* Live Test Design Feedback */}
-                {testDesignFeedback.length > 0 && (
-                    <Box
+                <Box
+                    sx={{
+                        width: '100%',
+                        maxWidth: '980px',
+                        mx: 'auto',
+                        animation: `${fadeInUp} 1s ease-out 1.1s backwards`,
+                    }}
+                >
+                    <Typography
                         sx={{
-                            width: '100%',
-                            maxWidth: '980px',
-                            mx: 'auto',
-                            animation: `${fadeInUp} 1s ease-out 1.1s backwards`,
+                            textAlign: 'center',
+                            fontSize: '0.72rem',
+                            fontWeight: 700,
+                            color: 'rgba(255,255,255,0.62)',
+                            letterSpacing: '1.4px',
+                            textTransform: 'uppercase',
+                            mb: 1.2,
                         }}
                     >
-                        <Typography
+                        Live Test Design Feedback
+                    </Typography>
+                    {testDesignFeedback.length === 0 ? (
+                        <Paper
+                            elevation={0}
                             sx={{
-                                textAlign: 'center',
-                                fontSize: '0.72rem',
-                                fontWeight: 700,
-                                color: 'rgba(255,255,255,0.62)',
-                                letterSpacing: '1.4px',
-                                textTransform: 'uppercase',
-                                mb: 1.2,
+                                p: 1.2,
+                                borderRadius: 2,
+                                bgcolor: 'rgba(139, 92, 246, 0.08)',
+                                border: '1px solid rgba(139, 92, 246, 0.4)',
+                                color: 'rgba(255,255,255,0.68)',
+                                fontSize: '0.78rem',
                             }}
                         >
-                            Live Test Design Feedback
-                        </Typography>
+                            No Test Design feedback yet. Submit feedback from Test Design and it will appear here.
+                        </Paper>
+                    ) : (
                         <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.2}>
                             {testDesignFeedback.map((entry, index) => (
                                 <Paper
@@ -619,7 +644,7 @@ export const LandingView = ({ onGetStarted }) => {
                                     <Typography sx={{ fontSize: '0.74rem', color: '#fbbf24', letterSpacing: '0.5px' }}>
                                         {'★'.repeat(Math.max(1, Math.min(5, Number(entry.rating) || 0)))}
                                         <Box component="span" sx={{ color: 'rgba(255,255,255,0.45)', ml: 0.6 }}>
-                                            {entry.category_label || 'Test Design'}
+                                            {entry.categoryLabel || entry.category_label || 'Test Design'}
                                         </Box>
                                     </Typography>
                                     <Typography
@@ -651,8 +676,8 @@ export const LandingView = ({ onGetStarted }) => {
                                 </Paper>
                             ))}
                         </Stack>
-                    </Box>
-                )}
+                    )}
+                </Box>
 
                 {/* Architect Profile */}
                 <Box

@@ -10,7 +10,7 @@ import {
     Typography,
 } from "@mui/material";
 import { alpha, useTheme } from "@mui/material/styles";
-import { Layers, RefreshCw, Rocket, Sparkles } from "lucide-react";
+import { ChevronDown, ChevronRight, FileCode, Layers, RefreshCw, Rocket, Sparkles } from "lucide-react";
 import { StatusSnackbar } from "../UI/StatusSnackbar";
 
 export function ReusableFlowsView() {
@@ -18,6 +18,7 @@ export function ReusableFlowsView() {
     const [sharedFlows, setSharedFlows] = useState([]);
     const [loadingFlows, setLoadingFlows] = useState(false);
     const [status, setStatus] = useState(null);
+    const [expandedFlowCodes, setExpandedFlowCodes] = useState({});
 
     const fetchSharedFlows = async () => {
         try {
@@ -37,6 +38,10 @@ export function ReusableFlowsView() {
     useEffect(() => {
         fetchSharedFlows();
     }, []);
+
+    const toggleCode = (flowName) => {
+        setExpandedFlowCodes((prev) => ({ ...prev, [flowName]: !prev[flowName] }));
+    };
 
     return (
         <Box sx={{ height: "calc(100vh - 64px)", display: "flex", flexDirection: "column", overflow: "hidden", p: 2 }}>
@@ -92,7 +97,20 @@ export function ReusableFlowsView() {
                                             {flow.name}
                                         </Typography>
                                     </Stack>
-                                    <Rocket size={13} color={theme.palette.error.main} />
+                                    <Stack direction="row" spacing={0.25} alignItems="center">
+                                        {flow.code && (
+                                            <Tooltip title={expandedFlowCodes[flow.name] ? "Hide code" : "Show code"}>
+                                                <IconButton
+                                                    size="small"
+                                                    sx={{ color: "error.main" }}
+                                                    onClick={() => toggleCode(flow.name)}
+                                                >
+                                                    {expandedFlowCodes[flow.name] ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                                                </IconButton>
+                                            </Tooltip>
+                                        )}
+                                        <Rocket size={13} color={theme.palette.error.main} />
+                                    </Stack>
                                 </Stack>
 
                                 <Typography variant="body2" color="text.secondary" sx={{ mb: flow.parameters?.length ? 1 : 0 }}>
@@ -116,6 +134,47 @@ export function ReusableFlowsView() {
                                             />
                                         ))}
                                     </Stack>
+                                )}
+
+                                {flow.code && expandedFlowCodes[flow.name] && (
+                                    <Box
+                                        sx={{
+                                            mt: 1,
+                                            p: 1.25,
+                                            borderRadius: 1,
+                                            border: "1px solid",
+                                            borderColor: alpha(theme.palette.error.main, 0.18),
+                                            bgcolor: alpha(theme.palette.error.main, 0.03),
+                                        }}
+                                    >
+                                        <Stack direction="row" spacing={0.75} alignItems="center" sx={{ mb: 0.75, color: "error.main" }}>
+                                            <FileCode size={14} />
+                                            <Typography variant="caption" sx={{ fontWeight: 700, letterSpacing: "0.04em", textTransform: "uppercase" }}>
+                                                Flow Code
+                                            </Typography>
+                                        </Stack>
+                                        <Box
+                                            component="pre"
+                                            sx={{
+                                                m: 0,
+                                                p: 1,
+                                                borderRadius: 1,
+                                                border: "1px solid",
+                                                borderColor: "divider",
+                                                bgcolor: theme.palette.mode === "dark" ? alpha("#000", 0.35) : "#fff",
+                                                color: "text.primary",
+                                                whiteSpace: "pre-wrap",
+                                                wordBreak: "break-word",
+                                                fontFamily: "monospace",
+                                                fontSize: "0.75rem",
+                                                lineHeight: 1.45,
+                                                maxHeight: 260,
+                                                overflowY: "auto",
+                                            }}
+                                        >
+                                            {flow.code}
+                                        </Box>
+                                    </Box>
                                 )}
                             </Paper>
                         ))

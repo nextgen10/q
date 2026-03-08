@@ -57,14 +57,14 @@ export const AIChatWindow = ({
 
     return (
         <div className={`fixed bottom-24 right-6 w-[560px] h-[600px] flex flex-col rounded-3xl border transition-all duration-300 transform animate-in fade-in slide-in-from-bottom-4 ${isDark
-            ? 'bg-[#1e1e1e] border-indigo-500/30 ring-1 ring-white/10 shadow-2xl'
-            : 'bg-white border-indigo-200 ring-1 ring-black/5 shadow-2xl'
+            ? 'bg-[#1e1e1e] border-red-500/35 ring-1 ring-white/10 shadow-2xl'
+            : 'bg-white border-red-200 ring-1 ring-black/5 shadow-2xl'
             } z-[100] overflow-hidden`}>
 
             {/* Header: Pure Modernist */}
             <div className={`flex items-center justify-between border-b ${isDark ? 'bg-[#252526] border-[#333]' : 'bg-gray-50 border-gray-200'}`} style={{ minHeight: 66, padding: '12px 20px' }}>
                 <div className="flex items-center" style={{ gap: 10 }}>
-                    <div className={`w-9 h-9 rounded-full flex items-center justify-center bg-gradient-to-br from-[#D00000] via-[#D00000] to-[#D00000] text-white shadow-lg shadow-indigo-500/20`}>
+                    <div className={`w-9 h-9 rounded-full flex items-center justify-center bg-gradient-to-br from-[#D00000] via-[#D00000] to-[#D00000] text-white shadow-lg shadow-red-500/20`}>
                         <Bot size={20} strokeWidth={2.5} />
                     </div>
                     <div>
@@ -72,7 +72,7 @@ export const AIChatWindow = ({
                             Playwright Coding Assistant
                         </h3>
                         <div className="flex items-center gap-1.5 min-w-0">
-                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                            <div className="w-1.5 h-1.5 rounded-full bg-red-500" />
                             <span className={`text-xs opacity-50 ${isDark ? 'text-zinc-400' : 'text-zinc-500'}`}>
                                 Online
                             </span>
@@ -102,7 +102,7 @@ export const AIChatWindow = ({
                 {chatMessages.length === 0 ? (
                     <div className="h-full flex flex-col items-center justify-center text-center p-6">
                         <div className={`w-20 h-20 rounded-full flex items-center justify-center mb-6 ${isDark ? 'bg-[#252526]' : 'bg-zinc-50'}`}>
-                            <Sparkles size={32} className="text-indigo-500" />
+                            <Sparkles size={32} className="text-red-500" />
                         </div>
                         <h2 className={`text-xl font-bold mb-2 ${isDark ? 'text-white' : 'text-zinc-900'}`}>How can I help you?</h2>
                         <p className={`text-sm opacity-60 leading-relaxed max-w-[280px] ${isDark ? 'text-zinc-400' : 'text-zinc-500'}`}>
@@ -122,8 +122,8 @@ export const AIChatWindow = ({
 
                             <div className={`max-w-[85%] flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
                                 <div className={`rounded-2xl text-[13.5px] leading-relaxed ${msg.role === 'user'
-                                    ? (isDark ? 'bg-[#2d2a35] border border-[#454052] text-zinc-100' : 'bg-[#f8f7ff] border border-[#e8e7f5] text-zinc-900 shadow-sm')
-                                    : (isDark ? 'bg-[#25282d] border border-[#303642] text-zinc-200' : 'bg-[#f0f7ff] border border-[#dee8f2] text-zinc-800 shadow-sm')
+                                    ? (isDark ? 'bg-[#2a2323] border border-[#493434] text-zinc-100' : 'bg-[#fff7f7] border border-[#f4dede] text-zinc-900 shadow-sm')
+                                    : (isDark ? 'bg-[#232629] border border-[#33383f] text-zinc-200' : 'bg-[#f7f7f7] border border-[#e5e7eb] text-zinc-800 shadow-sm')
                                     }`} style={{ padding: '10px 14px' }}>
                                     {msg.content && msg.content.includes('```') ? (
                                         <div className="space-y-3">
@@ -145,7 +145,7 @@ export const AIChatWindow = ({
                                                                     title="Copy Code Snippet"
                                                                 >
                                                                     {copiedId === `code-${idx}-${i}` ? (
-                                                                        <Check size={14} className="text-emerald-500" />
+                                                                        <Check size={14} className="text-red-500" />
                                                                     ) : (
                                                                         <Copy size={14} />
                                                                     )}
@@ -191,7 +191,7 @@ export const AIChatWindow = ({
                                     >
                                         {copiedId === `msg-${idx}` ? (
                                             <>
-                                                <Check size={14} className="text-emerald-500" />
+                                                <Check size={14} className="text-red-500" />
 
                                             </>
                                         ) : (
@@ -211,9 +211,9 @@ export const AIChatWindow = ({
                         </div>
                         <div className={`rounded-2xl ${isDark ? 'bg-[#252526] border border-[#333]' : 'bg-white border border-gray-200 shadow-sm'}`} style={{ padding: '10px 14px' }}>
                             <div className="flex gap-1.5">
-                                <span className="w-1 h-1 rounded-full bg-indigo-500 animate-bounce" />
-                                <span className="w-1 h-1 rounded-full bg-indigo-500 animate-bounce [animation-delay:0.2s]" />
-                                <span className="w-1 h-1 rounded-full bg-indigo-500 animate-bounce [animation-delay:0.4s]" />
+                                <span className="w-1 h-1 rounded-full bg-red-500 animate-bounce" />
+                                <span className="w-1 h-1 rounded-full bg-red-500 animate-bounce [animation-delay:0.2s]" />
+                                <span className="w-1 h-1 rounded-full bg-red-500 animate-bounce [animation-delay:0.4s]" />
                             </div>
                         </div>
                     </div>
@@ -227,7 +227,7 @@ export const AIChatWindow = ({
                     <button
                         onClick={() => setIncludeContext(!includeContext)}
                         className={`flex items-center gap-2 rounded-full border transition-all ${includeContext
-                            ? (isDark ? 'bg-indigo-500/10 border-indigo-500/50 text-indigo-400' : 'bg-indigo-50 border-indigo-200 text-indigo-600')
+                            ? (isDark ? 'bg-red-500/10 border-red-500/50 text-red-400' : 'bg-red-50 border-red-200 text-red-700')
                             : (isDark ? 'border-zinc-800 text-zinc-500 hover:border-zinc-700' : 'border-zinc-200 text-zinc-400 hover:border-zinc-300')
                             }`} style={{ padding: '6px 10px' }}
                     >
@@ -241,9 +241,9 @@ export const AIChatWindow = ({
                 <form
                     autoComplete="off"
                     style={{ marginTop: 10 }}
-                    className={`relative flex items-center gap-1.5 bg-white rounded-2xl border transition-all focus-within:ring-2 focus-within:ring-indigo-500/20 ${isDark
-                        ? 'bg-zinc-950 border-zinc-800 focus-within:border-indigo-500/50 shadowed-input'
-                        : 'bg-white border-zinc-200 focus-within:border-indigo-500 shadow-sm'
+                    className={`relative flex items-center gap-1.5 bg-white rounded-2xl border transition-all focus-within:ring-2 focus-within:ring-red-500/20 ${isDark
+                        ? 'bg-zinc-950 border-zinc-800 focus-within:border-red-500/50 shadowed-input'
+                        : 'bg-white border-zinc-200 focus-within:border-red-500 shadow-sm'
                         }`}
                     onSubmit={handleSubmit}
                 >
@@ -255,7 +255,7 @@ export const AIChatWindow = ({
                     <button
                         type="submit"
                         disabled={isChatTyping}
-                        className={`mr-1 rounded-xl transition-all hover:scale-105 active:scale-95 bg-gradient-to-br from-[#D00000] via-[#D00000] to-[#D00000] text-white disabled:opacity-50 disabled:scale-100 disabled:cursor-not-allowed shadow-md shadow-indigo-500/20`} style={{ padding: 8 }}
+                        className={`mr-1 rounded-xl transition-all hover:scale-105 active:scale-95 bg-gradient-to-br from-[#D00000] via-[#D00000] to-[#D00000] text-white disabled:opacity-50 disabled:scale-100 disabled:cursor-not-allowed shadow-md shadow-red-500/20`} style={{ padding: 8 }}
                     >
                         <Send size={18} />
                     </button>
