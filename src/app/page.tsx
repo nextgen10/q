@@ -91,6 +91,7 @@ export default function QualarisLanding() {
             { id: 'platforms', label: 'Use Cases', onClick: () => document.getElementById('products-section')?.scrollIntoView({ behavior: 'smooth' }) },
             { id: 'methodology', label: 'Methodology', onClick: () => document.getElementById('methodology-section')?.scrollIntoView({ behavior: 'smooth' }) },
             { id: 'capabilities', label: 'Capabilities', onClick: () => document.getElementById('capabilities-section')?.scrollIntoView({ behavior: 'smooth' }) },
+            { id: 'our-team', label: 'Our Team', onClick: () => router.push('/docs#our-team') },
           ]}
           onLogoClick={() => router.push('/')}
           actions={

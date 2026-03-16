@@ -53,6 +53,7 @@ import { UnifiedNavBar } from '../../components/UnifiedNavBar';
 import ThemeToggle from '@/components/ThemeToggle';
 import { API_ROOT } from '@/utils/apiBase';
 import { useRouter } from 'next/navigation';
+import { SourceAboutContent } from './SourceAboutContent';
 
 export default function DocumentationPage() {
     const theme = useTheme();
@@ -125,9 +126,24 @@ export default function DocumentationPage() {
                                     ON THIS PAGE
                                 </Typography>
                                 <Stack spacing={1}>
-                                    {['Overview', 'Ground Truth Application', 'Playwright Compass', 'Agent Eval', 'RAG Eval', 'Agent Metrics', 'RAG Metrics', 'Decision Engine', 'Models & API', 'API as a Service', 'Authentication', 'API Reference', 'Contact Support'].map((item) => (
+                                    {[
+                                        { label: 'Overview', id: 'overview' },
+                                        { label: 'Ground Truth Application', id: 'ground-truth-application' },
+                                        { label: 'Playwright Compass', id: 'playwright-compass' },
+                                        { label: 'Agent Eval Use Case', id: 'agent-eval' },
+                                        { label: 'RAG Eval Use Case', id: 'rag-eval' },
+                                        { label: 'RAG Methodology', id: 'rag-methodology' },
+                                        { label: 'Agent Eval Metrics', id: 'agent-metrics' },
+                                        { label: 'Decision Engine', id: 'decision-engine' },
+                                        { label: 'Models & Infrastructure', id: 'models-api' },
+                                        { label: 'API as a Service', id: 'api-as-a-service' },
+                                        { label: 'Authentication', id: 'authentication' },
+                                        { label: 'API Reference', id: 'api-reference' },
+                                        { label: 'Our Team', id: 'our-team' },
+                                        { label: 'Technical Ownership', id: 'contact-support' },
+                                    ].map((item) => (
                                         <Typography
-                                            key={item}
+                                            key={item.id}
                                             variant="body2"
                                             sx={{
                                                 cursor: 'pointer',
@@ -136,11 +152,9 @@ export default function DocumentationPage() {
                                                 transition: 'color 0.2s',
                                                 fontWeight: 500
                                             }}
-                                            onClick={() => {
-                                                document.getElementById(item.toLowerCase().replace(/\s+/g, '-').replace(/&/g, '').replace(/-{2,}/g, '-'))?.scrollIntoView({ behavior: 'smooth' });
-                                            }}
+                                            onClick={() => document.getElementById(item.id)?.scrollIntoView({ behavior: 'smooth' })}
                                         >
-                                            {item}
+                                            {item.label}
                                         </Typography>
                                     ))}
                                 </Stack>
@@ -277,9 +291,19 @@ export default function DocumentationPage() {
                                         />
                                         <MetricDetail
                                             title="Configuration"
-                                            description="RQS weights (Alpha=Semantic, Beta=Faithful, Gamma=Relevant), Judge model (gpt-4o), strictness, max rows. Weights are normalized if sum exceeds 1.0."
+                                            description="Configure weights (Alpha/Beta/Gamma), metric toggles, thresholds, judge model, and max rows. Weights are validated and normalized for safe production scoring."
+                                        />
+                                        <MetricDetail
+                                            title="Confusion Matrix + Recommendation"
+                                            description="Run-level diagnostics include TP/FP/FN/TN analytics and derived metrics. Use the recommendation endpoint to generate remediation guidance from metric gaps."
                                         />
                                     </Stack>
+                                </Box>
+
+                                {/* 5b. RAG Methodology (source About content moved here) */}
+                                <Box id="rag-methodology" sx={{ scrollMarginTop: '80px' }}>
+                                    <SectionHeader icon={<Target size={24} />} title="RAG Methodology" />
+                                    <SourceAboutContent />
                                 </Box>
 
                                 {/* 4. Agent Metrics */}
@@ -316,44 +340,6 @@ export default function DocumentationPage() {
                                             title="Safety Score"
                                             description="Unified score (0–1) for content safety (non-toxicity) and qualitative judge results. 1.0 = perfectly safe."
                                             example="LLM evaluates response for harmful, biased, or unsafe content. Score &lt; 0.8 triggers safety issues list."
-                                        />
-                                    </Stack>
-                                </Box>
-
-                                {/* 5. RAG Metrics */}
-                                <Box id="rag-metrics" sx={{ scrollMarginTop: '80px' }}>
-                                    <SectionHeader icon={<Activity size={24} />} title="RAG Eval Metrics" />
-                                    <Stack spacing={3}>
-                                        <MetricDetail
-                                            title="RQS (Retrieval Quality Score)"
-                                            description="Master index for RAG performance. Weighted composite: RQS = α × Answer Correctness + β × Faithfulness + γ × Relevancy. Alpha (Semantic), Beta (Faithful), Gamma (Relevant) are configurable; typically α=0.4, β=0.3, γ=0.3."
-                                            formula="RQS = α × Correctness + β × Faithfulness + γ × Relevancy"
-                                            example="Correctness 0.9, Faithfulness 0.95, Relevancy 0.85 with default weights → RQS ≈ 0.90."
-                                        />
-                                        <MetricDetail
-                                            title="Answer Correctness"
-                                            description="Alignment of the bot response with ground truth. Uses semantic similarity (e.g., cosine) or exact match depending on setup."
-                                            example="GT: 'Revenue was $50M in Q3.' Output: 'Q3 revenue reached $50 million.' → High semantic similarity, Correctness ≈ 0.95."
-                                        />
-                                        <MetricDetail
-                                            title="Faithfulness (Groundedness)"
-                                            description="Measures how accurately the response is supported by the retrieved context. Detects hallucinations relative to source documents."
-                                            example="User asks Q3 profit. Source says $40M. Bot says $50M → Faithfulness = 0.0 (hallucination). Bot says $40M → Faithfulness = 1.0."
-                                        />
-                                        <MetricDetail
-                                            title="Answer Relevancy"
-                                            description="Does the response address the user's intent? Measures relevance of the answer to the query."
-                                            example="Query: 'What was Q3 revenue?' Answer discusses Q2 → Low Relevancy. Answer focuses on Q3 → High Relevancy."
-                                        />
-                                        <MetricDetail
-                                            title="Context Precision"
-                                            description="Signal-to-noise of retrieved chunks. Are the correct chunks ranked at the top? High precision = fewer irrelevant chunks before relevant ones."
-                                            example="Top 3 chunks all contain the answer → High Precision. Top 5 chunks include 2 irrelevant → Lower Precision."
-                                        />
-                                        <MetricDetail
-                                            title="Context Recall"
-                                            description="Coverage: Did retrieval find the answer at all? Percentage of relevant chunks retrieved."
-                                            example="Answer is in 1 of 10 chunks; 8 retrieved and 1 is relevant → Recall depends on that chunk's presence. 100% = answer-containing chunk was retrieved."
                                         />
                                     </Stack>
                                 </Box>
@@ -396,7 +382,7 @@ export default function DocumentationPage() {
                                         </Table>
                                     </TableContainer>
                                     <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-                                        Agent Eval API: <code style={{ padding: '2px 6px', background: 'rgba(0,0,0,0.1)', borderRadius: 4 }}>/agent-eval</code>. RAG Eval backend: port 8000.
+                                        Agent Eval API base: <code style={{ padding: '2px 6px', background: 'rgba(0,0,0,0.1)', borderRadius: 4 }}>/agent-eval</code>. RAG Eval APIs are root-level endpoints, with health available at <code style={{ padding: '2px 6px', background: 'rgba(0,0,0,0.1)', borderRadius: 4 }}>/health</code>.
                                     </Typography>
                                     <Box sx={{ mt: 2, display: 'flex', gap: 2 }}>
                                         <Button variant="outlined" startIcon={<Code />} href={`${API_ROOT}/docs`} target="_blank" rel="noopener noreferrer" sx={{ borderColor: 'divider', color: 'text.primary', '&:hover': { borderColor: 'primary.main', bgcolor: 'rgba(208,0,0,0.04)' } }}>Swagger UI</Button>
@@ -469,25 +455,29 @@ export default function DocumentationPage() {
                                 <Box id="authentication" sx={{ scrollMarginTop: '80px' }}>
                                     <SectionHeader icon={<Shield size={24} />} title="Authentication" />
                                     <Typography variant="body1" paragraph color="text.secondary">
-                                        All data endpoints require authentication via the <code style={{ padding: '2px 6px', background: 'rgba(0,0,0,0.08)', borderRadius: 4 }}>X-API-Key</code> header.
-                                        The only unauthenticated endpoints are <strong>registration</strong> and <strong>login</strong>.
+                                        Qualaris uses username/password sign-in for platform access. After login, requests are authorized with <code style={{ padding: '2px 6px', background: 'rgba(0,0,0,0.08)', borderRadius: 4 }}>X-API-Key</code>.
+                                        Access is enforced per application scope (for example, RAG Eval or Agent Eval).
                                     </Typography>
 
                                     <Stack spacing={3}>
                                         <Paper sx={{ p: 3, borderRadius: 4, border: '1px solid', borderColor: 'divider' }}>
-                                            <Typography variant="h6" fontWeight={800} gutterBottom>Register Application</Typography>
+                                            <Typography variant="h6" fontWeight={800} gutterBottom>Register Account</Typography>
                                             <CodeBlock>{`POST /agent-eval/apps/register
 Content-Type: application/json
 
 {
-  "app_name": "My Trading Bot",
-  "owner_email": "team@company.com"
+  "username": "qa_engineer",
+  "password": "securePass123",
+  "owner_email": "team@company.com",
+  "requested_access": "ALL"
 }
 
 # Response:
 {
-  "app_id": "my-trading-bot",
-  "app_name": "My Trading Bot",
+  "app_id": "qa_engineer",
+  "app_name": "qa_engineer",
+  "username": "qa_engineer",
+  "requested_access": "ALL",
   "api_key": "nxe_abc123..."   ← Save this! Shown only once.
 }`}</CodeBlock>
                                             <Typography variant="caption" color="warning.main" sx={{ display: 'block', mt: 1, fontWeight: 600 }}>
@@ -496,23 +486,26 @@ Content-Type: application/json
                                         </Paper>
 
                                         <Paper sx={{ p: 3, borderRadius: 4, border: '1px solid', borderColor: 'divider' }}>
-                                            <Typography variant="h6" fontWeight={800} gutterBottom>Login (Validate Key)</Typography>
+                                            <Typography variant="h6" fontWeight={800} gutterBottom>Login</Typography>
                                             <CodeBlock>{`POST /agent-eval/apps/login
 Content-Type: application/json
 
 {
-  "api_key": "nxe_abc123..."
+  "username": "qa_engineer",
+  "password": "securePass123"
 }
 
 # Response (200):
 {
-  "app_id": "my-trading-bot",
-  "app_name": "My Trading Bot",
+  "app_id": "qa_engineer",
+  "app_name": "qa_engineer",
+  "username": "qa_engineer",
+  "requested_access": "ALL",
   "owner_email": "team@company.com"
 }
 
 # Response (401):
-{ "detail": "Invalid API key" }`}</CodeBlock>
+{ "detail": "Invalid username or password" }`}</CodeBlock>
                                         </Paper>
 
                                         <Paper sx={{ p: 3, borderRadius: 4, border: '1px solid', borderColor: 'divider' }}>
@@ -551,7 +544,7 @@ X-API-Key: nxe_current_key...
                                     <SectionHeader icon={<Code size={24} />} title="API Reference" />
                                     <Typography variant="body1" paragraph color="text.secondary">
                                         All endpoints require the <code style={{ padding: '2px 6px', background: 'rgba(0,0,0,0.08)', borderRadius: 4 }}>X-API-Key</code> header unless noted.
-                                        The server currently exposes two endpoint groups: <strong>Agent Eval</strong> (under <code>/agent-eval</code>) and <strong>RAG Eval</strong> (root-level).
+                                        The server exposes two endpoint groups: <strong>Agent Eval</strong> (under <code>/agent-eval</code>) and <strong>RAG Eval</strong> (root-level).
                                         <br />
                                         <strong>Ground Truth Generator</strong> and <strong>Playwright Compass</strong> are integrated as in-platform product modules and do not yet publish separate public API groups.
                                     </Typography>
@@ -563,7 +556,7 @@ X-API-Key: nxe_current_key...
                                     </Typography>
                                     <EndpointTable rows={[
                                         { method: 'POST', path: '/apps/register', desc: 'Register a new application and receive an API key', auth: 'None' },
-                                        { method: 'POST', path: '/apps/login', desc: 'Validate API key and get app info', auth: 'None' },
+                                        { method: 'POST', path: '/apps/login', desc: 'Username/password login and API key session bootstrap', auth: 'None' },
                                         { method: 'GET', path: '/apps/me', desc: 'Get current authenticated app info', auth: 'Required' },
                                         { method: 'POST', path: '/apps/{id}/rotate-key', desc: 'Rotate API key (invalidates old key immediately)', auth: 'Required' },
                                         { method: 'DELETE', path: '/apps/{id}', desc: 'Deactivate your application', auth: 'Required' },
@@ -585,11 +578,14 @@ X-API-Key: nxe_current_key...
                                         <Chip label="/ (root)" size="small" sx={{ ml: 1, fontFamily: 'monospace', fontSize: '0.7rem' }} />
                                     </Typography>
                                     <EndpointTable rows={[
+                                        { method: 'GET', path: '/health', desc: 'Service and database health check', auth: 'None' },
                                         { method: 'POST', path: '/evaluate-excel', desc: 'Upload Excel file and run RAG evaluation across bots', auth: 'Required' },
                                         { method: 'POST', path: '/evaluate', desc: 'Run RAG evaluation from JSON test cases', auth: 'Required' },
+                                        { method: 'POST', path: '/recommendation', desc: 'Generate remediation recommendation from metric gaps', auth: 'Required' },
                                         { method: 'GET', path: '/latest', desc: 'Get the most recent RAG evaluation result', auth: 'Required' },
                                         { method: 'GET', path: '/evaluations', desc: 'List all RAG evaluation summaries', auth: 'Required' },
                                         { method: 'GET', path: '/evaluations/{id}', desc: 'Get full RAG evaluation by ID', auth: 'Required' },
+                                        { method: 'GET', path: '/rag/prompts', desc: 'Get source-aligned prompt templates', auth: 'Required' },
                                         { method: 'DELETE', path: '/cache/cleanup', desc: 'Clean up metric cache older than 30 days', auth: 'Required' },
                                     ]} />
 
@@ -724,9 +720,18 @@ Content-Type: multipart/form-data
 #   gamma:       0.3 (Relevancy weight)
 #   max_rows:    200 (safety limit)
 #   temperature: 0.0
-#   concurrency: 5
-#   strictness:  0.7
-#   safety:      true
+#   faithfulness_enabled: true
+#   answer_relevancy_enabled: true
+#   answer_correctness_enabled: true
+#   context_recall_enabled: true
+#   context_precision_enabled: true
+#   toxicity_enabled: true
+#   faithfulness_threshold: 0.8
+#   answer_relevancy_threshold: 0.8
+#   answer_correctness_threshold: 0.8
+#   context_recall_threshold: 0.75
+#   context_precision_threshold: 0.75
+#   rqs_threshold: 0.75
 
 # Excel format:
 # | Query          | Ground_Truth     | Bot_A         | Bot_B         | Context_A    | Context_B    |
@@ -768,7 +773,7 @@ Content-Type: application/json
 # Response includes per-bot metrics:
 # - faithfulness, answer_relevancy
 # - context_precision, context_recall
-# - semantic_similarity, rqs
+# - answer_correctness, rqs
 # - leaderboard with winner`}</CodeBlock>
                                         </Paper>
 
@@ -874,6 +879,63 @@ curl -X POST https://your-server/agent-eval/apps/my-app/rotate-key \\
                                 </Box>
 
                                 {/* 11. Contact Support */}
+                                <Box id="our-team" sx={{ scrollMarginTop: '80px' }}>
+                                    <SectionHeader icon={<Users size={24} />} title="Our Team" />
+                                    <Typography variant="body1" paragraph color="text.secondary" sx={{ maxWidth: 780 }}>
+                                        Meet the Qualaris product and engineering team. The following profiles are placeholders for final production identities.
+                                    </Typography>
+                                    <Grid container spacing={2.5}>
+                                        {[
+                                            { name: 'Aarav Sharma', role: 'Product Lead', photo: '/team/member-01.jpg' },
+                                            { name: 'Isha Verma', role: 'Engineering Manager', photo: '/team/member-02.jpg' },
+                                            { name: 'Rohan Mehta', role: 'Frontend Engineer', photo: '/team/member-03.jpg' },
+                                            { name: 'Neha Kapoor', role: 'Backend Engineer', photo: '/team/member-04.jpg' },
+                                            { name: 'Kabir Singh', role: 'AI/ML Engineer', photo: '/team/member-05.jpg' },
+                                            { name: 'Maya Rao', role: 'QA Automation Engineer', photo: '/team/member-06.jpg' },
+                                            { name: 'Arjun Patel', role: 'Data Engineer', photo: '/team/member-07.jpg' },
+                                            { name: 'Sara Khan', role: 'UX Designer', photo: '/team/member-08.jpg' },
+                                        ].map((member) => (
+                                            <Grid key={member.name} size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
+                                                <Paper
+                                                    sx={{
+                                                        p: 2.5,
+                                                        borderRadius: 3,
+                                                        border: '1px solid',
+                                                        borderColor: 'divider',
+                                                        bgcolor: 'background.paper',
+                                                        height: '100%',
+                                                        transition: 'all 0.2s ease',
+                                                        '&:hover': {
+                                                            borderColor: 'primary.main',
+                                                            transform: 'translateY(-2px)',
+                                                            boxShadow: (t) => `0 8px 18px ${alpha(t.palette.primary.main, 0.12)}`,
+                                                        },
+                                                    }}
+                                                >
+                                                    <Stack spacing={1.4} alignItems="center" textAlign="center">
+                                                        <Avatar
+                                                            src={member.photo}
+                                                            alt={member.name}
+                                                            sx={{
+                                                                width: 72,
+                                                                height: 72,
+                                                                border: '1px solid',
+                                                                borderColor: (t) => alpha(t.palette.primary.main, 0.3),
+                                                            }}
+                                                        />
+                                                        <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>
+                                                            {member.name}
+                                                        </Typography>
+                                                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
+                                                            {member.role}
+                                                        </Typography>
+                                                    </Stack>
+                                                </Paper>
+                                            </Grid>
+                                        ))}
+                                    </Grid>
+                                </Box>
+
                                 <Box id="contact-support" sx={{ scrollMarginTop: '80px' }}>
                                     <SectionHeader icon={<Mail size={24} />} title="Technical Ownership" />
                                     <Paper sx={{ p: 4, borderRadius: 4, bgcolor: (t) => alpha(t.palette.primary.main, 0.04), border: '1px solid', borderColor: (t) => alpha(t.palette.primary.main, 0.2) }}>
@@ -971,8 +1033,10 @@ function EndpointTable({ rows }: { rows: { method: string; path: string; desc: s
                             <TableCell>
                                 <Chip label={row.method} size="small" sx={{
                                     fontWeight: 700, fontSize: '0.7rem',
-                                    bgcolor: row.method === 'GET' ? 'rgba(45,108,223,0.1)' : row.method === 'POST' ? 'rgba(31,138,112,0.1)' : 'rgba(194,48,48,0.1)',
-                                    color: row.method === 'GET' ? '#2D6CDF' : row.method === 'POST' ? '#1F8A70' : '#C23030',
+                                    bgcolor: (t) => row.method === 'DELETE'
+                                        ? alpha(t.palette.error.main, 0.12)
+                                        : alpha(t.palette.primary.main, 0.12),
+                                    color: (t) => row.method === 'DELETE' ? t.palette.error.main : t.palette.primary.main,
                                 }} />
                             </TableCell>
                             <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.8rem', fontWeight: 600 }}>{row.path}</TableCell>
